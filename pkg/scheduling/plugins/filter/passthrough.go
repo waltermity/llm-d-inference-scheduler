@@ -1,3 +1,4 @@
+// Package filter provides filter plugins for the epp.
 package filter
 
 import (
@@ -13,6 +14,6 @@ func (p *Passthrough) Name() string {
 }
 
 // Filter defines the filtering function. In this case it is a passthrough
-func (p *Passthrough) Filter(ctx *types.SchedulingContext, pods []types.Pod) []types.Pod {
+func (p *Passthrough) Filter(_ *types.SchedulingContext, pods []types.Pod) []types.Pod {
 	return pods
 }

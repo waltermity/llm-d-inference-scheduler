@@ -13,7 +13,7 @@ require (
 	k8s.io/client-go v0.32.4
 	k8s.io/component-base v0.32.4
 	sigs.k8s.io/controller-runtime v0.20.4
-	sigs.k8s.io/gateway-api-inference-extension v0.3.0
+	sigs.k8s.io/gateway-api-inference-extension v0.0.0-20250502210155-0ae7d1d1b5c6
 )
 
 require (

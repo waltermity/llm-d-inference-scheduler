@@ -27,9 +27,17 @@ format: ## Format Go source files
 	@gofmt -l -w $(SRC)
 
 .PHONY: test
-test: check-ginkgo ## Run tests
-	@printf "\033[33;1m==== Running tests ====\033[0m\n"
-	ginkgo -r -v
+test: test.unit
+
+.PHONY: test-unit
+test-unit:
+	@printf "\033[33;1m==== Running Unit Tests ====\033[0m\n"
+	go test -v ./...
+
+.PHONY: test-integration
+test-integration:
+	@printf "\033[33;1m==== Running Integration Tests ====\033[0m\n"
+	go test -v -tags=integration_tests ./test/integration/
 
 .PHONY: post-deploy-test
 post-deploy-test: ## Run post deployment tests

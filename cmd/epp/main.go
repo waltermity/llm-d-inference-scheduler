@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package main contains the "Endpoint Picker (EPP)" program for scheduling
+// inference requests.
 package main
 
 import (
@@ -43,7 +45,9 @@ import (
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling"
 	runserver "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/server"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
-	"sigs.k8s.io/gateway-api-inference-extension/pkg/util/runnable"
+
+	"github.com/neuralmagic/llm-d-inference-scheduler/internal/controller/runnable"
+	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/dual"
 )
 
 const (

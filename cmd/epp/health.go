@@ -32,7 +32,7 @@ type healthServer struct {
 	datastore datastore.Datastore
 }
 
-func (s *healthServer) Check(ctx context.Context, in *healthPb.HealthCheckRequest) (*healthPb.HealthCheckResponse, error) {
+func (s *healthServer) Check(_ context.Context, in *healthPb.HealthCheckRequest) (*healthPb.HealthCheckResponse, error) {
 	if !s.datastore.PoolHasSynced() {
 		s.logger.V(logutil.DEFAULT).Info("gRPC health check not serving", "service", in.Service)
 		return &healthPb.HealthCheckResponse{Status: healthPb.HealthCheckResponse_NOT_SERVING}, nil
@@ -41,6 +41,6 @@ func (s *healthServer) Check(ctx context.Context, in *healthPb.HealthCheckReques
 	return &healthPb.HealthCheckResponse{Status: healthPb.HealthCheckResponse_SERVING}, nil
 }
 
-func (s *healthServer) Watch(in *healthPb.HealthCheckRequest, srv healthPb.Health_WatchServer) error {
+func (s *healthServer) Watch(_ *healthPb.HealthCheckRequest, _ healthPb.Health_WatchServer) error {
 	return status.Error(codes.Unimplemented, "Watch is not implemented")
 }
