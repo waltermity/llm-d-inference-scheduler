@@ -178,19 +178,19 @@ func run() error {
 
 	datastore := datastore.NewDatastore(ctx, pmf)
 
-	schedulingConfig := &scheduling.SchedulerConfig{
-		PreSchedulePlugins: []plugins.PreSchedule{},
-		Filters: []plugins.Filter{
+	schedulerConfig := scheduling.NewSchedulerConfig(
+		[]plugins.PreSchedule{},
+		[]plugins.Filter{
 			&filter.Passthrough{},
 		},
-		Scorers: map[plugins.Scorer]int{
+		map[plugins.Scorer]int{
 			&scorer.Passthrough{}: 10,
 		},
-		Picker:              &picker.RandomPicker{},
-		PostSchedulePlugins: []plugins.PostSchedule{},
-	}
+		&picker.RandomPicker{},
+		[]plugins.PostSchedule{},
+	)
 
-	scheduler := scheduling.NewSchedulerWithConfig(datastore, schedulingConfig)
+	scheduler := scheduling.NewSchedulerWithConfig(datastore, schedulerConfig)
 
 	serverRunner := &runserver.ExtProcServerRunner{
 		GrpcPort:                                 *grpcPort,
