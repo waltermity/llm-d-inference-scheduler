@@ -1,3 +1,4 @@
+// Package tls includes tooling for handling TLS certificates for controllers.
 package tls
 
 import (
@@ -10,12 +11,10 @@ import (
 	"fmt"
 	"math/big"
 	"time"
-
-	"github.com/go-logr/logr"
 )
 
 // CreateSelfSignedTLSCertificate generates a self-signed certificate.
-func CreateSelfSignedTLSCertificate(logger logr.Logger) (tls.Certificate, error) {
+func CreateSelfSignedTLSCertificate() (tls.Certificate, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {

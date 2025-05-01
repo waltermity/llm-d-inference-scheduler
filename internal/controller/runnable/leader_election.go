@@ -17,7 +17,7 @@ func RequireLeaderElection(runnable manager.Runnable) manager.Runnable {
 	return LeaderElection(runnable, true)
 }
 
-// RequireLeaderElection disabled leader election for the provided manager.Runnable.
+// NoLeaderElection disabled leader election for the provided manager.Runnable.
 func NoLeaderElection(runnable manager.Runnable) manager.Runnable {
 	return LeaderElection(runnable, false)
 }

@@ -27,7 +27,7 @@ format: ## Format Go source files
 	@gofmt -l -w $(SRC)
 
 .PHONY: test
-test: test.unit
+test: test-unit
 
 .PHONY: test-unit
 test-unit:

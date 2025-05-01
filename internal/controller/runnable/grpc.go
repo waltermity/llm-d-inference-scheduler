@@ -1,3 +1,5 @@
+// Package runnable contains tooling to manage and convert manager.Runnable
+// objects for controllers.
 package runnable
 
 import (
