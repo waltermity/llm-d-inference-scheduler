@@ -1,0 +1,6 @@
+{
+  "dev-version": "0.0.1",
+  "dev-registry": "quay.io/llm-d/llm-d-inference-scheduler-dev",
+  "prod-version": "0.0.0",
+  "prod-registry": "quay.io/llm-d/llm-d-inference-scheduler"
+}
