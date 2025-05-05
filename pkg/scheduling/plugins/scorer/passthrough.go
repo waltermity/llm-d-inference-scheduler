@@ -4,6 +4,7 @@ package scorer
 import (
 	"fmt"
 
+	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/plugins"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 	logutil "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
 )
@@ -11,6 +12,8 @@ import (
 // Passthrough is an example scorer which processes the pods, but does not
 // give them any score.
 type Passthrough struct{}
+
+var _ plugins.Scorer = &Passthrough{}
 
 // Name provides the textual identifier for this scorer.
 func (p *Passthrough) Name() string {

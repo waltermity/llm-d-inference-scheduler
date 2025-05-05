@@ -42,16 +42,11 @@ import (
 	backendmetrics "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/backend/metrics"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/datastore"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/metrics"
-	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling"
-	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/plugins"
-	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/plugins/picker"
 	runserver "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/server"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
 
 	"github.com/neuralmagic/llm-d-inference-scheduler/internal/controller/runnable"
 	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/dual"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
 )
 
 const (
@@ -177,20 +172,7 @@ func run() error {
 	ctx := ctrl.SetupSignalHandler()
 
 	datastore := datastore.NewDatastore(ctx, pmf)
-
-	schedulerConfig := scheduling.NewSchedulerConfig(
-		[]plugins.PreSchedule{},
-		[]plugins.Filter{
-			&filter.Passthrough{},
-		},
-		map[plugins.Scorer]int{
-			&scorer.Passthrough{}: 10,
-		},
-		&picker.RandomPicker{},
-		[]plugins.PostSchedule{},
-	)
-
-	scheduler := scheduling.NewSchedulerWithConfig(datastore, schedulerConfig)
+	scheduler := dual.NewScheduler(0.2, datastore)
 
 	serverRunner := &runserver.ExtProcServerRunner{
 		GrpcPort:                                 *grpcPort,
