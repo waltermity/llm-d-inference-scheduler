@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 
+	extProcPb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"github.com/go-logr/logr"
 	"google.golang.org/grpc/codes"
 	healthPb "google.golang.org/grpc/health/grpc_health_v1"
@@ -33,12 +34,32 @@ type healthServer struct {
 }
 
 func (s *healthServer) Check(_ context.Context, in *healthPb.HealthCheckRequest) (*healthPb.HealthCheckResponse, error) {
+	if in.Service != extProcPb.ExternalProcessor_ServiceDesc.ServiceName {
+		s.logger.V(logutil.DEFAULT).Info("gRPC health check requested unknown service", "available-services", []string{extProcPb.ExternalProcessor_ServiceDesc.ServiceName}, "requested-service", in.Service)
+		return &healthPb.HealthCheckResponse{Status: healthPb.HealthCheckResponse_SERVICE_UNKNOWN}, nil
+	}
+
 	if !s.datastore.PoolHasSynced() {
-		s.logger.V(logutil.DEFAULT).Info("gRPC health check not serving", "service", in.Service)
+		s.logger.V(logutil.DEFAULT).Info("gRPC health check not serving", "service", extProcPb.ExternalProcessor_ServiceDesc.ServiceName)
 		return &healthPb.HealthCheckResponse{Status: healthPb.HealthCheckResponse_NOT_SERVING}, nil
 	}
-	s.logger.V(logutil.TRACE).Info("gRPC health check serving", "service", in.Service)
+
+	s.logger.V(logutil.TRACE).Info("gRPC health check serving", "service", extProcPb.ExternalProcessor_ServiceDesc.ServiceName)
 	return &healthPb.HealthCheckResponse{Status: healthPb.HealthCheckResponse_SERVING}, nil
+}
+
+func (s *healthServer) List(ctx context.Context, _ *healthPb.HealthListRequest) (*healthPb.HealthListResponse, error) {
+	// currently only the ext_proc service is provided
+	serviceHealthResponse, err := s.Check(ctx, &healthPb.HealthCheckRequest{Service: extProcPb.ExternalProcessor_ServiceDesc.ServiceName})
+	if err != nil {
+		return nil, err
+	}
+
+	return &healthPb.HealthListResponse{
+		Statuses: map[string]*healthPb.HealthCheckResponse{
+			extProcPb.ExternalProcessor_ServiceDesc.ServiceName: serviceHealthResponse,
+		},
+	}, nil
 }
 
 func (s *healthServer) Watch(_ *healthPb.HealthCheckRequest, _ healthPb.Health_WatchServer) error {
