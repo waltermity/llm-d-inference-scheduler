@@ -54,7 +54,7 @@ lint: check-golangci-lint ## Run lint
 .PHONY: build
 build: check-go ##
 	@printf "\033[33;1m==== Building ====\033[0m\n"
-	go build -o bin/$(PROJECT_NAME) cmd/$(PROJECT_NAME)/main.go
+	go build -o bin/epp cmd/epp/main.go cmd/epp/health.go
 
 ##@ Container Build/Push
 
