@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istio-reader-clusterrole-gateway-istio-gateway
+  name: istio-reader-clusterrole-llm-d-gateway-llm-d-istio-system
 rules:
 - apiGroups:
   - config.istio.io
@@ -124,7 +124,7 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-clusterrole-gateway-istio-gateway
+  name: istiod-clusterrole-llm-d-gateway-llm-d-istio-system
 rules:
 - apiGroups:
   - admissionregistration.k8s.io
@@ -359,7 +359,7 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-gateway-controller-gateway-istio-gateway
+  name: istiod-gateway-controller-llm-d-gateway-llm-d-istio-system
 rules:
 - apiGroups:
   - apps
@@ -410,15 +410,15 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istio-reader-clusterrole-gateway-istio-gateway
+  name: istio-reader-clusterrole-llm-d-gateway-llm-d-istio-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: istio-reader-clusterrole-gateway-istio-gateway
+  name: istio-reader-clusterrole-llm-d-gateway-llm-d-istio-system
 subjects:
 - kind: ServiceAccount
   name: istio-reader-service-account
-  namespace: istio-gateway
+  namespace: llm-d-istio-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -432,15 +432,15 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-clusterrole-gateway-istio-gateway
+  name: istiod-clusterrole-llm-d-gateway-llm-d-istio-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: istiod-clusterrole-gateway-istio-gateway
+  name: istiod-clusterrole-llm-d-gateway-llm-d-istio-system
 subjects:
 - kind: ServiceAccount
-  name: istiod-gateway
-  namespace: istio-gateway
+  name: istiod-llm-d-gateway
+  namespace: llm-d-istio-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -454,15 +454,15 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-gateway-controller-gateway-istio-gateway
+  name: istiod-gateway-controller-llm-d-gateway-llm-d-istio-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: istiod-gateway-controller-gateway-istio-gateway
+  name: istiod-gateway-controller-llm-d-gateway-llm-d-istio-system
 subjects:
 - kind: ServiceAccount
-  name: istiod-gateway
-  namespace: istio-gateway
+  name: istiod-llm-d-gateway
+  namespace: llm-d-istio-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -476,8 +476,8 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-gateway
-  namespace: istio-gateway
+  name: istiod-llm-d-gateway
+  namespace: llm-d-istio-system
 rules:
 - apiGroups:
   - networking.istio.io
@@ -524,13 +524,13 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-gateway
-  namespace: istio-gateway
+  name: istiod-llm-d-gateway
+  namespace: llm-d-istio-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: istiod-gateway
+  name: istiod-llm-d-gateway
 subjects:
 - kind: ServiceAccount
-  name: istiod-gateway
-  namespace: istio-gateway
+  name: istiod-llm-d-gateway
+  namespace: llm-d-istio-system

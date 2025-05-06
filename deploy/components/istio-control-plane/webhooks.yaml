@@ -10,16 +10,16 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     istio: istiod
-    istio.io/rev: gateway
+    istio.io/rev: llm-d-gateway
     release: istio
-  name: istio-validator-gateway-istio-gateway
+  name: istio-validator-llm-d-gateway-llm-d-istio-system
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: istiod-gateway
-      namespace: istio-gateway
+      name: istiod-llm-d-gateway
+      namespace: llm-d-istio-system
       path: /validate
   failurePolicy: Ignore
   name: rev.validation.istio.io
@@ -28,7 +28,7 @@ webhooks:
     - key: istio.io/rev
       operator: In
       values:
-      - gateway
+      - llm-d-gateway
   rules:
   - apiGroups:
     - security.istio.io
@@ -56,17 +56,17 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     install.operator.istio.io/owning-resource: unknown
-    istio.io/rev: gateway
+    istio.io/rev: llm-d-gateway
     operator.istio.io/component: Pilot
     release: istio
-  name: istio-sidecar-injector-gateway-istio-gateway
+  name: istio-sidecar-injector-llm-d-gateway-llm-d-istio-system
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
     service:
-      name: istiod-gateway
-      namespace: istio-gateway
+      name: istiod-llm-d-gateway
+      namespace: llm-d-istio-system
       path: /inject
       port: 443
   failurePolicy: Fail
@@ -76,7 +76,7 @@ webhooks:
     - key: istio.io/rev
       operator: In
       values:
-      - gateway
+      - llm-d-gateway
     - key: istio-injection
       operator: DoesNotExist
   objectSelector:
@@ -100,8 +100,8 @@ webhooks:
   - v1
   clientConfig:
     service:
-      name: istiod-gateway
-      namespace: istio-gateway
+      name: istiod-llm-d-gateway
+      namespace: llm-d-istio-system
       path: /inject
       port: 443
   failurePolicy: Fail
@@ -121,7 +121,7 @@ webhooks:
     - key: istio.io/rev
       operator: In
       values:
-      - gateway
+      - llm-d-gateway
   reinvocationPolicy: Never
   rules:
   - apiGroups:

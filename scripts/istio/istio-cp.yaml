@@ -2,7 +2,7 @@ apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 spec:
   profile: default
-  revision: gateway
+  revision: llm-d-gateway
   components:
     ingressGateways:
       - name: istio-ingressgateway

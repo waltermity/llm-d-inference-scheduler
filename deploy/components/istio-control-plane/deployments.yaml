@@ -11,16 +11,16 @@ metadata:
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     install.operator.istio.io/owning-resource: unknown
     istio: pilot
-    istio.io/rev: gateway
+    istio.io/rev: llm-d-gateway
     operator.istio.io/component: Pilot
     release: istio
-  name: istiod-gateway
-  namespace: istio-gateway
+  name: istiod-llm-d-gateway
+  namespace: llm-d-istio-system
 spec:
   selector:
     matchLabels:
       app: istiod
-      istio.io/rev: gateway
+      istio.io/rev: llm-d-gateway
   strategy:
     rollingUpdate:
       maxSurge: 100%
@@ -42,7 +42,7 @@ spec:
         install.operator.istio.io/owning-resource: unknown
         istio: istiod
         istio.io/dataplane-mode: none
-        istio.io/rev: gateway
+        istio.io/rev: llm-d-gateway
         operator.istio.io/component: Pilot
         sidecar.istio.io/inject: "false"
     spec:
@@ -57,7 +57,7 @@ spec:
         - 30m
         env:
         - name: REVISION
-          value: gateway
+          value: llm-d-gateway
         - name: PILOT_CERT_PROVIDER
           value: istiod
         - name: POD_NAME
@@ -78,7 +78,7 @@ spec:
         - name: KUBECONFIG
           value: /var/run/secrets/remote/config
         - name: CA_TRUSTED_NODE_ACCOUNTS
-          value: istio-gateway/ztunnel
+          value: llm-d-istio-system/ztunnel
         - name: PILOT_TRACE_SAMPLING
           value: "1"
         - name: PILOT_ENABLE_ANALYSIS
@@ -150,7 +150,7 @@ spec:
         - mountPath: /var/run/secrets/istiod/ca
           name: istio-csr-ca-configmap
           readOnly: true
-      serviceAccountName: istiod-gateway
+      serviceAccountName: istiod-llm-d-gateway
       tolerations:
       - key: cni.istio.io/not-ready
         operator: Exists

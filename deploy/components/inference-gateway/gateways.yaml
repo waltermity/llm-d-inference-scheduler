@@ -3,7 +3,7 @@ kind: Gateway
 metadata:
   name: inference-gateway
   labels:
-    istio.io/rev: gateway
+    istio.io/rev: llm-d-gateway
 spec:
   listeners:
   - name: default
