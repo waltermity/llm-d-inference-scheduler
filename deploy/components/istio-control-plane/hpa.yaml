@@ -10,11 +10,11 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     install.operator.istio.io/owning-resource: unknown
-    istio.io/rev: default
+    istio.io/rev: gateway
     operator.istio.io/component: Pilot
     release: istio
-  name: istiod
-  namespace: istio-system
+  name: istiod-gateway
+  namespace: istio-gateway
 spec:
   maxReplicas: 5
   metrics:
@@ -28,4 +28,4 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: istiod
+    name: istiod-gateway

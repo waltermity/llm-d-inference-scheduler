@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istio-reader-clusterrole-istio-system
+  name: istio-reader-clusterrole-gateway-istio-gateway
 rules:
 - apiGroups:
   - config.istio.io
@@ -111,7 +111,6 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -125,7 +124,7 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-clusterrole-istio-system
+  name: istiod-clusterrole-gateway-istio-gateway
 rules:
 - apiGroups:
   - admissionregistration.k8s.io
@@ -347,7 +346,6 @@ rules:
   - get
   - watch
   - list
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -361,7 +359,7 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-gateway-controller-istio-system
+  name: istiod-gateway-controller-gateway-istio-gateway
 rules:
 - apiGroups:
   - apps
@@ -399,7 +397,6 @@ rules:
   - patch
   - create
   - delete
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -413,16 +410,15 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istio-reader-clusterrole-istio-system
+  name: istio-reader-clusterrole-gateway-istio-gateway
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: istio-reader-clusterrole-istio-system
+  name: istio-reader-clusterrole-gateway-istio-gateway
 subjects:
 - kind: ServiceAccount
   name: istio-reader-service-account
-  namespace: istio-system
-
+  namespace: istio-gateway
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -436,16 +432,15 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-clusterrole-istio-system
+  name: istiod-clusterrole-gateway-istio-gateway
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: istiod-clusterrole-istio-system
+  name: istiod-clusterrole-gateway-istio-gateway
 subjects:
 - kind: ServiceAccount
-  name: istiod
-  namespace: istio-system
-
+  name: istiod-gateway
+  namespace: istio-gateway
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -459,43 +454,15 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod-gateway-controller-istio-system
+  name: istiod-gateway-controller-gateway-istio-gateway
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: istiod-gateway-controller-istio-system
+  name: istiod-gateway-controller-gateway-istio-gateway
 subjects:
 - kind: ServiceAccount
-  name: istiod
-  namespace: istio-system
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  labels:
-    app.kubernetes.io/instance: istio
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: istio-ingressgateway
-    app.kubernetes.io/part-of: istio
-    app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
-    helm.sh/chart: istio-ingress-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc
-    install.operator.istio.io/owning-resource: unknown
-    istio.io/rev: default
-    operator.istio.io/component: IngressGateways
-    release: istio
-  name: istio-ingressgateway-sds
-  namespace: istio-system
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - watch
-  - list
-
+  name: istiod-gateway
+  namespace: istio-gateway
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -509,8 +476,8 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod
-  namespace: istio-system
+  name: istiod-gateway
+  namespace: istio-gateway
 rules:
 - apiGroups:
   - networking.istio.io
@@ -544,32 +511,6 @@ rules:
   - update
   - patch
   - create
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  labels:
-    app.kubernetes.io/instance: istio
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: istio-ingressgateway
-    app.kubernetes.io/part-of: istio
-    app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
-    helm.sh/chart: istio-ingress-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc
-    install.operator.istio.io/owning-resource: unknown
-    istio.io/rev: default
-    operator.istio.io/component: IngressGateways
-    release: istio
-  name: istio-ingressgateway-sds
-  namespace: istio-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: istio-ingressgateway-sds
-subjects:
-- kind: ServiceAccount
-  name: istio-ingressgateway-service-account
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -583,13 +524,13 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     release: istio
-  name: istiod
-  namespace: istio-system
+  name: istiod-gateway
+  namespace: istio-gateway
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: istiod
+  name: istiod-gateway
 subjects:
 - kind: ServiceAccount
-  name: istiod
-  namespace: istio-system
+  name: istiod-gateway
+  namespace: istio-gateway

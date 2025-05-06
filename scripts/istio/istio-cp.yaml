@@ -1,0 +1,9 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  profile: default
+  revision: gateway
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: false

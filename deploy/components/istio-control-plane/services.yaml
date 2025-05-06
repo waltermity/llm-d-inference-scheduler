@@ -11,11 +11,11 @@ metadata:
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     install.operator.istio.io/owning-resource: unknown
     istio: pilot
-    istio.io/rev: default
+    istio.io/rev: gateway
     operator.istio.io/component: Pilot
     release: istio
-  name: istiod
-  namespace: istio-system
+  name: istiod-gateway
+  namespace: istio-gateway
 spec:
   ports:
   - name: grpc-xds
@@ -33,4 +33,4 @@ spec:
     protocol: TCP
   selector:
     app: istiod
-    istio: pilot
+    istio.io/rev: gateway
