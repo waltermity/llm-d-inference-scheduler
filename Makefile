@@ -6,7 +6,8 @@ TARGETARCH ?= $(shell go env GOARCH)
 PROJECT_NAME ?= llm-d-inference-scheduler
 DEV_VERSION ?= 0.0.1
 PROD_VERSION ?= 0.0.0
-IMAGE_TAG_BASE ?= quay.io/llm-d/$(PROJECT_NAME)
+IMAGE_REGISTRY ?= quay.io/llm-d
+IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(PROJECT_NAME)
 IMG = $(IMAGE_TAG_BASE):$(DEV_VERSION)
 NAMESPACE ?= hc4ai-operator
 
@@ -395,3 +396,16 @@ sync-gie-fork:
 	perl -pi -e 's/(replace\s+sigs\.k8s\.io\/gateway-api-inference-extension\s+=>\s+github\.com\/neuralmagic\/gateway-api-inference-extension\s+)\S+/$$1upstream-sync/' go.mod
 	go mod tidy
 	go mod verify
+
+##@ Dev Environments
+
+KIND_CLUSTER_NAME ?= llm-d-inference-scheduler-dev
+KIND_GATEWAY_HOST_PORT ?= 30080
+
+.PHONY: env-dev-kind
+env-dev-kind: image-build
+	GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
+	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+	EPP_IMAGE=$(PROJECT_NAME) \
+	EPP_TAG=$(DEV_VERSION) \
+		./scripts/kind-dev-env.sh
