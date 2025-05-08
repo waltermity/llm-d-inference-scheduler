@@ -2,12 +2,12 @@ apiVersion: v1
 data:
   mesh: |-
     defaultConfig:
-      discoveryAddress: istiod.istio-system.svc:15012
+      discoveryAddress: istiod-llm-d-gateway.llm-d-istio-system.svc:15012
     defaultProviders:
       metrics:
       - prometheus
     enablePrometheusMerge: true
-    rootNamespace: istio-system
+    rootNamespace: llm-d-istio-system
     trustDomain: cluster.local
   meshNetworks: 'networks: {}'
 kind: ConfigMap
@@ -20,12 +20,11 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     install.operator.istio.io/owning-resource: unknown
-    istio.io/rev: default
+    istio.io/rev: llm-d-gateway
     operator.istio.io/component: Pilot
     release: istio
-  name: istio
-  namespace: istio-system
-
+  name: istio-llm-d-gateway
+  namespace: llm-d-istio-system
 ---
 apiVersion: v1
 data:
@@ -1905,7 +1904,7 @@ data:
         "hub": "gcr.io/istio-testing",
         "imagePullPolicy": "",
         "imagePullSecrets": [],
-        "istioNamespace": "istio-system",
+        "istioNamespace": "llm-d-istio-system",
         "istiod": {
           "enableAnalysis": false
         },
@@ -1997,7 +1996,7 @@ data:
           "provider": "default"
         }
       },
-      "revision": "",
+      "revision": "llm-d-gateway",
       "sidecarInjectorWebhook": {
         "alwaysInjectSelector": [],
         "defaultTemplates": [],
@@ -2019,8 +2018,8 @@ metadata:
     app.kubernetes.io/version: 1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     helm.sh/chart: istiod-1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
     install.operator.istio.io/owning-resource: unknown
-    istio.io/rev: default
+    istio.io/rev: llm-d-gateway
     operator.istio.io/component: Pilot
     release: istio
-  name: istio-sidecar-injector
-  namespace: istio-system
+  name: istio-sidecar-injector-llm-d-gateway
+  namespace: llm-d-istio-system

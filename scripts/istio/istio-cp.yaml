@@ -1,0 +1,14 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  profile: default
+  revision: llm-d-gateway
+  components:
+    pilot:
+      k8s:
+        resources:
+          requests:
+            memory: 1024Mi
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: false
