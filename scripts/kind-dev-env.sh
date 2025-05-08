@@ -22,6 +22,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Set the host port to map to the Gateway's inbound port (30080)
 : "${GATEWAY_HOST_PORT:=30080}"
 
+# Set the default IMAGE_REGISTRY if not provided
+: "${IMAGE_REGISTRY:=quay.io/llm-d}"
+
+# Set a default VLLM_SIMULATOR_IMAGE if not provided
+: "${VLLM_SIMULATOR_IMAGE:=vllm-sim}"
+
+# Set a default VLLM_SIMULATOR_TAG if not provided
+: "${VLLM_SIMULATOR_TAG:=0.0.2}"
+
+# Set a default ENDPOINT_PICKER_IMAGE if not provided
+: "${ENDPOINT_PICKER_IMAGE:=llm-d-inference-scheduler}"
+
+# Set a default ENDPOINT_PICKER_TAG if not provided
+: "${ENDPOINT_PICKER_TAG:=0.0.1}"
+
 # Set the inference pool name for the deployment
 export POOL_NAME="${POOL_NAME:-vllm-llama3-8b-instruct}"
 
@@ -79,9 +94,6 @@ KUBE_CONTEXT="kind-${CLUSTER_NAME}"
 
 set -x
 
-# Load the required container images
-"${SCRIPT_DIR}/kind-load-images.sh"
-
 # Hotfix for https://github.com/kubernetes-sigs/kind/issues/3880
 CONTAINER_NAME="${CLUSTER_NAME}-control-plane"
 ${CONTAINER_RUNTIME} exec -it ${CONTAINER_NAME} /bin/bash -c "sysctl net.ipv4.conf.all.arp_ignore=0"
@@ -90,6 +102,23 @@ ${CONTAINER_RUNTIME} exec -it ${CONTAINER_NAME} /bin/bash -c "sysctl net.ipv4.co
 kubectl --context ${KUBE_CONTEXT} -n kube-system wait --for=condition=Ready --all pods --timeout=300s
 kubectl --context ${KUBE_CONTEXT} -n local-path-storage wait --for=condition=Ready --all pods --timeout=300s
 
+# ------------------------------------------------------------------------------
+# Load Container Images
+# ------------------------------------------------------------------------------
+
+# Load the vllm simulator image into the cluster
+if [ "${CONTAINER_RUNTIME}" == "podman" ]; then
+	podman save ${IMAGE_REGISTRY}/${VLLM_SIMULATOR_IMAGE}:${VLLM_SIMULATOR_TAG} -o /dev/stdout | kind --name ${CLUSTER_NAME} load image-archive /dev/stdin
+else
+	kind --name ${CLUSTER_NAME} load docker-image ${IMAGE_REGISTRY}/${VLLM_SIMULATOR_IMAGE}:${VLLM_SIMULATOR_TAG}
+fi
+
+# Load the ext_proc endpoint-picker image into the cluster
+if [ "${CONTAINER_RUNTIME}" == "podman" ]; then
+	podman save ${IMAGE_REGISTRY}/${ENDPOINT_PICKER_IMAGE}:${ENDPOINT_PICKER_TAG} -o /dev/stdout | kind --name ${CLUSTER_NAME} load image-archive /dev/stdin
+else
+	kind --name ${CLUSTER_NAME} load docker-image ${IMAGE_REGISTRY}/${ENDPOINT_PICKER_IMAGE}:${ENDPOINT_PICKER_TAG}
+fi
 # ------------------------------------------------------------------------------
 # CRD Deployment (Gateway API + GIE)
 # ------------------------------------------------------------------------------
