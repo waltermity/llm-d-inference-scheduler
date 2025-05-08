@@ -31,11 +31,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Set a default VLLM_SIMULATOR_TAG if not provided
 : "${VLLM_SIMULATOR_TAG:=0.0.2}"
 
-# Set a default ENDPOINT_PICKER_IMAGE if not provided
-: "${ENDPOINT_PICKER_IMAGE:=llm-d-inference-scheduler}"
+# Set a default EPP_IMAGE if not provided
+: "${EPP_IMAGE:=llm-d-inference-scheduler}"
 
-# Set a default ENDPOINT_PICKER_TAG if not provided
-: "${ENDPOINT_PICKER_TAG:=0.0.1}"
+# Set a default EPP_TAG if not provided
+: "${EPP_TAG:=0.0.1}"
 
 # Set the inference pool name for the deployment
 export POOL_NAME="${POOL_NAME:-vllm-llama3-8b-instruct}"
@@ -115,9 +115,9 @@ fi
 
 # Load the ext_proc endpoint-picker image into the cluster
 if [ "${CONTAINER_RUNTIME}" == "podman" ]; then
-	podman save ${IMAGE_REGISTRY}/${ENDPOINT_PICKER_IMAGE}:${ENDPOINT_PICKER_TAG} -o /dev/stdout | kind --name ${CLUSTER_NAME} load image-archive /dev/stdin
+	podman save ${IMAGE_REGISTRY}/${EPP_IMAGE}:${EPP_TAG} -o /dev/stdout | kind --name ${CLUSTER_NAME} load image-archive /dev/stdin
 else
-	kind --name ${CLUSTER_NAME} load docker-image ${IMAGE_REGISTRY}/${ENDPOINT_PICKER_IMAGE}:${ENDPOINT_PICKER_TAG}
+	kind --name ${CLUSTER_NAME} load docker-image ${IMAGE_REGISTRY}/${EPP_IMAGE}:${EPP_TAG}
 fi
 # ------------------------------------------------------------------------------
 # CRD Deployment (Gateway API + GIE)
