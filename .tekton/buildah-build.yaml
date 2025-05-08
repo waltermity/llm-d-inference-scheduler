@@ -40,6 +40,8 @@ spec:
         echo "🔐 Extracting Git credentials from workspace..."
         GIT_USER=$(cat /workspace/git-auth/username)
         GIT_TOKEN=$(cat /workspace/git-auth/token)
+        export GIT_NM_USER=${GIT_USER}
+        export NM_TOKEN=${GIT_TOKEN}
 
         if [ -z "$GIT_USER" ] || [ -z "$GIT_TOKEN" ]; then
           echo "❌ Error: Missing git-auth credentials"
