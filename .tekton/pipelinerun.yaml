@@ -133,6 +133,8 @@ spec:
         workspaces:
           - name: source
             workspace: source
+          - name: git-auth
+            workspace: git-auth
 
       - name: go-test
         when:
@@ -165,6 +167,8 @@ spec:
         workspaces:
           - name: source
             workspace: source
+          - name: git-auth
+            workspace: git-auth
 
       - name: extract-version-and-registry
         params:
