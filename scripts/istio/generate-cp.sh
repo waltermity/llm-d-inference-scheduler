@@ -9,5 +9,5 @@ CRD_DIR=deploy/components/crds-istio/
 CP_DIR=deploy/components/istio-control-plane/
 ISTIO_CP="$(dirname "$0")/istio-cp.yaml"
 
-istioctl manifest generate --dry-run --set values.global.istioNamespace=$GATEWAY_NAMESPACE -f $ISTIO_CP | scripts/istio/split.py -o $CP_DIR
+istioctl manifest generate --dry-run --set values.global.istioNamespace=$GATEWAY_NAMESPACE -f $ISTIO_CP | scripts/istio/manifest-splitter.py -o $CP_DIR
 mv $CP_DIR/crds.yaml $CRD_DIR/istio.yaml
