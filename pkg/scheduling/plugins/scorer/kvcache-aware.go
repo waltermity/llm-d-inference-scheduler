@@ -82,30 +82,14 @@ func (s *KVCacheAwareScorer) Score(ctx *types.SchedulingContext, pods []types.Po
 	}
 	loggerDebug.Info("Got pod scores", "scores", scores)
 
-	return indexerScoresToNormalizedScoredPods(pods, scores)
-}
-
-func indexerScoresToNormalizedScoredPods(pods []types.Pod, scores map[string]int) map[types.Pod]float64 {
-	scoredPods := make(map[types.Pod]float64)
-	minScore, maxScore := getMinMax(scores)
-
-	for _, pod := range pods {
+	podToKey := func(pod types.Pod) (string, bool) {
 		metricsPod := pod.GetPod()
 		if metricsPod == nil {
-			continue
+			return "", false
 		}
 
-		if score, ok := scores[metricsPod.Address]; ok {
-			if minScore == maxScore {
-				scoredPods[pod] = 1.0
-				continue
-			}
-
-			scoredPods[pod] = float64(score-minScore) / float64(maxScore-minScore)
-		} else {
-			scoredPods[pod] = 0.0
-		}
+		return metricsPod.Address, true
 	}
 
-	return scoredPods
+	return indexedScoresToNormalizedScoredPods(pods, podToKey, scores)
 }
