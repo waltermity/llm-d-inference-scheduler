@@ -24,7 +24,7 @@ set -eo pipefail
 : "${VLLM_SIMULATOR_TAG:=0.0.2}"
 
 # Set a default ENDPOINT_PICKER_IMAGE if not provided
-: "${ENDPOINT_PICKER_IMAGE:=gateway-api-inference-extension/epp}"
+: "${ENDPOINT_PICKER_IMAGE:=llm-d-inference-scheduler}"
 
 # Set a default ENDPOINT_PICKER_TAG if not provided
 : "${ENDPOINT_PICKER_TAG:=0.0.1}"
