@@ -19,6 +19,8 @@ spec:
       fsGroup: 0
     imagePullSecrets:
       - name: icr-secret
+    nodeSelector:
+      nvidia.com/gpu.product: "none"   # Ensures tasks run on non-GPU nodes
   params:
     - name: runOptional
       value: "true"

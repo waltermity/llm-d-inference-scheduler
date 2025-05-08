@@ -35,7 +35,7 @@ spec:
         echo "🔧 IMAGE_TAG_BASE: $(params.image_tag_base)"
 
         echo "📦 Installing dependencies: make, jq..."
-        dnf install -y make jq && dnf clean all
+        dnf install -y make git jq && dnf clean all
 
         echo "🔐 Extracting Git credentials from workspace..."
         GIT_USER=$(cat /workspace/git-auth/username)
