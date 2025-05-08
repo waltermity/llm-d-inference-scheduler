@@ -18,7 +18,7 @@ spec:
       terminationGracePeriodSeconds: 130
       containers:
       - name: epp
-        image: quay.io/llm-d/gateway-api-inference-extension/epp:latest
+        image: quay.io/llm-d/llm-d-inference-scheduler:latest
         imagePullPolicy: IfNotPresent
         args:
         - -poolName
@@ -39,12 +39,12 @@ spec:
         livenessProbe:
           grpc:
             port: 9003
-            service: inference-extension
+            service: envoy.service.ext_proc.v3.ExternalProcessor
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           grpc:
             port: 9003
-            service: inference-extension
+            service: envoy.service.ext_proc.v3.ExternalProcessor
           initialDelaySeconds: 5
           periodSeconds: 10

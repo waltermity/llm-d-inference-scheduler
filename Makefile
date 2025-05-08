@@ -6,7 +6,8 @@ TARGETARCH ?= $(shell go env GOARCH)
 PROJECT_NAME ?= llm-d-inference-scheduler
 DEV_VERSION ?= 0.0.1
 PROD_VERSION ?= 0.0.0
-IMAGE_TAG_BASE ?= quay.io/llm-d/$(PROJECT_NAME)
+IMAGE_REGISTRY ?= quay.io/llm-d
+IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(PROJECT_NAME)
 IMG = $(IMAGE_TAG_BASE):$(DEV_VERSION)
 NAMESPACE ?= hc4ai-operator
 
@@ -74,6 +75,12 @@ build: check-go download-tokenizer ##
 .PHONY: buildah-build
 buildah-build: check-builder load-version-json ## Build and push image (multi-arch if supported)
 	@echo "✅ Using builder: $(BUILDER)"
+ifndef GIT_NM_USER
+	$(error "GIT_NM_USER is not set")
+endif
+ifndef NM_TOKEN
+	$(error "NM_TOKEN is not set")
+endif
 	@if [ "$(BUILDER)" = "buildah" ]; then \
 	  echo "🔧 Buildah detected: Performing multi-arch build..."; \
 	  FINAL_TAG=$(IMG); \
@@ -122,6 +129,12 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 .PHONY:	image-build
 image-build: check-container-tool load-version-json ## Build Docker image ## Build Docker image using $(CONTAINER_TOOL)
 	@printf "\033[33;1m==== Building Docker image $(IMG) ====\033[0m\n"
+ifndef GIT_NM_USER
+	$(error "GIT_NM_USER is not set")
+endif
+ifndef NM_TOKEN
+	$(error "NM_TOKEN is not set")
+endif
 	$(CONTAINER_TOOL) build \
  		--build-arg TARGETOS=$(TARGETOS) \
 		--build-arg TARGETARCH=$(TARGETARCH) \
@@ -383,3 +396,16 @@ sync-gie-fork:
 	perl -pi -e 's/(replace\s+sigs\.k8s\.io\/gateway-api-inference-extension\s+=>\s+github\.com\/neuralmagic\/gateway-api-inference-extension\s+)\S+/$$1upstream-sync/' go.mod
 	go mod tidy
 	go mod verify
+
+##@ Dev Environments
+
+KIND_CLUSTER_NAME ?= llm-d-inference-scheduler-dev
+KIND_GATEWAY_HOST_PORT ?= 30080
+
+.PHONY: env-dev-kind
+env-dev-kind: image-build
+	GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
+	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+	EPP_IMAGE=$(PROJECT_NAME) \
+	EPP_TAG=$(DEV_VERSION) \
+		./scripts/kind-dev-env.sh

@@ -4,6 +4,7 @@ metadata:
   name: inference-gateway
   labels:
     istio.io/enable-inference-extproc: "true"
+    istio.io/rev: llm-d-gateway
   annotations:
     networking.istio.io/service-type: ClusterIP
 spec:

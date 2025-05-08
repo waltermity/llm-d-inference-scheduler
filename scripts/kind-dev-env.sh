@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This shell script deploys a kind cluster with a KGateway-based Gateway API
+# This shell script deploys a kind cluster with an Istio-based Gateway API
 # implementation fully configured. It deploys the vllm simulator, which it
 # exposes with a Gateway -> HTTPRoute -> InferencePool. The Gateway is
 # configured with the a filter for the ext_proc endpoint picker.
@@ -13,17 +13,29 @@ set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# TODO: get image names, paths, versions, etc. from the .version.json file
-# See: https://github.com/neuralmagic/gateway-api-inference-extension/issues/28
-
 # Set a default CLUSTER_NAME if not provided
-: "${CLUSTER_NAME:=llm-d-dev}"
+: "${CLUSTER_NAME:=llm-d-inference-scheduler-dev}"
 
 # Set the namespace to deploy the Gateway stack to
 : "${PROJECT_NAMESPACE:=default}"
 
 # Set the host port to map to the Gateway's inbound port (30080)
 : "${GATEWAY_HOST_PORT:=30080}"
+
+# Set the default IMAGE_REGISTRY if not provided
+: "${IMAGE_REGISTRY:=quay.io/llm-d}"
+
+# Set a default VLLM_SIMULATOR_IMAGE if not provided
+: "${VLLM_SIMULATOR_IMAGE:=vllm-sim}"
+
+# Set a default VLLM_SIMULATOR_TAG if not provided
+: "${VLLM_SIMULATOR_TAG:=0.0.2}"
+
+# Set a default EPP_IMAGE if not provided
+: "${EPP_IMAGE:=llm-d-inference-scheduler}"
+
+# Set a default EPP_TAG if not provided
+: "${EPP_TAG:=0.0.1}"
 
 # Set the inference pool name for the deployment
 export POOL_NAME="${POOL_NAME:-vllm-llama3-8b-instruct}"
@@ -57,13 +69,6 @@ for cmd in kind kubectl kustomize ${CONTAINER_RUNTIME}; do
     fi
 done
 
-# @TODO Make sure the EPP and vllm-sim images are present or built
-# EPP: `make image-load` in the GIE repo
-# vllm-sim: ``
-# note: you may need to retag the built images to match the expected path and
-# versions listed above
-# See: https://github.com/neuralmagic/gateway-api-inference-extension/issues/28
-
 # ------------------------------------------------------------------------------
 # Cluster Deployment
 # ------------------------------------------------------------------------------
@@ -89,9 +94,6 @@ KUBE_CONTEXT="kind-${CLUSTER_NAME}"
 
 set -x
 
-# Load the required container images
-"${SCRIPT_DIR}/kind-load-images.sh"
-
 # Hotfix for https://github.com/kubernetes-sigs/kind/issues/3880
 CONTAINER_NAME="${CLUSTER_NAME}-control-plane"
 ${CONTAINER_RUNTIME} exec -it ${CONTAINER_NAME} /bin/bash -c "sysctl net.ipv4.conf.all.arp_ignore=0"
@@ -100,6 +102,23 @@ ${CONTAINER_RUNTIME} exec -it ${CONTAINER_NAME} /bin/bash -c "sysctl net.ipv4.co
 kubectl --context ${KUBE_CONTEXT} -n kube-system wait --for=condition=Ready --all pods --timeout=300s
 kubectl --context ${KUBE_CONTEXT} -n local-path-storage wait --for=condition=Ready --all pods --timeout=300s
 
+# ------------------------------------------------------------------------------
+# Load Container Images
+# ------------------------------------------------------------------------------
+
+# Load the vllm simulator image into the cluster
+if [ "${CONTAINER_RUNTIME}" == "podman" ]; then
+	podman save ${IMAGE_REGISTRY}/${VLLM_SIMULATOR_IMAGE}:${VLLM_SIMULATOR_TAG} -o /dev/stdout | kind --name ${CLUSTER_NAME} load image-archive /dev/stdin
+else
+	kind --name ${CLUSTER_NAME} load docker-image ${IMAGE_REGISTRY}/${VLLM_SIMULATOR_IMAGE}:${VLLM_SIMULATOR_TAG}
+fi
+
+# Load the ext_proc endpoint-picker image into the cluster
+if [ "${CONTAINER_RUNTIME}" == "podman" ]; then
+	podman save ${IMAGE_REGISTRY}/${EPP_IMAGE}:${EPP_TAG} -o /dev/stdout | kind --name ${CLUSTER_NAME} load image-archive /dev/stdin
+else
+	kind --name ${CLUSTER_NAME} load docker-image ${IMAGE_REGISTRY}/${EPP_IMAGE}:${EPP_TAG}
+fi
 # ------------------------------------------------------------------------------
 # CRD Deployment (Gateway API + GIE)
 # ------------------------------------------------------------------------------
@@ -122,11 +141,15 @@ kustomize build --enable-helm deploy/environments/dev/kind-istio \
 	| envsubst \${POOL_NAME} | sed "s/REPLACE_NAMESPACE/${PROJECT_NAMESPACE}/gI" \
 	| kubectl --context ${KUBE_CONTEXT} apply -f -
 
-# Wait for all control-plane pods to be ready
-kubectl --context ${KUBE_CONTEXT} -n llm-d-istio-system wait --for=condition=Ready --all pods --timeout=360s
+# ------------------------------------------------------------------------------
+# Check & Verify
+# ------------------------------------------------------------------------------
 
-# Wait for all pods to be ready
-kubectl --context ${KUBE_CONTEXT} wait --for=condition=Ready --all pods --timeout=300s
+# Wait for all control-plane deployments to be ready
+kubectl --context ${KUBE_CONTEXT} -n llm-d-istio-system wait --for=condition=available --timeout=60s deployment --all
+
+# Wait for all deployments to be ready
+kubectl --context ${KUBE_CONTEXT} -n default wait --for=condition=available --timeout=60s deployment --all
 
 # Wait for the gateway to be ready
 kubectl --context ${KUBE_CONTEXT} wait gateway/inference-gateway --for=condition=Programmed --timeout=60s
