@@ -1,6 +1,8 @@
 SHELL := /usr/bin/env bash
 
 # Defaults
+TARGETOS ?= $(shell go env GOOS)
+TARGETARCH ?= $(shell go env GOARCH)
 PROJECT_NAME ?= llm-d-inference-scheduler
 DEV_VERSION ?= 0.0.1
 PROD_VERSION ?= 0.0.0
@@ -8,14 +10,7 @@ IMAGE_TAG_BASE ?= quay.io/llm-d/$(PROJECT_NAME)
 IMG = $(IMAGE_TAG_BASE):$(DEV_VERSION)
 NAMESPACE ?= hc4ai-operator
 
-CONTAINER_TOOL := $(shell \
-	if command -v docker >/dev/null 2>&1; then \
-		echo docker; \
-	elif command -v podman >/dev/null 2>&1; then \
-		echo podman; \
-	else \
-		echo ""; \
-	fi)
+CONTAINER_TOOL := $(shell { command -v docker >/dev/null 2>&1 && echo docker; } || { command -v podman >/dev/null 2>&1 && echo podman; } || echo "")
 BUILDER := $(shell command -v buildah >/dev/null 2>&1 && echo buildah || echo $(CONTAINER_TOOL))
 PLATFORMS ?= linux/amd64 # linux/arm64 # linux/s390x,linux/ppc64le
 
@@ -25,6 +20,17 @@ SRC = $(shell find . -type f -name '*.go')
 .PHONY: help
 help: ## Print help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+# tokenizer & linking
+LDFLAGS ?= -extldflags '-L$(shell pwd)/lib'
+CGO_ENABLED=1
+
+.PHONY: download-tokenizer
+download-tokenizer: ## Download the HuggingFace tokenizer bindings.
+	@echo "Downloading HuggingFace tokenizer bindings..."
+	mkdir -p lib
+	curl -L https://github.com/daulet/tokenizers/releases/download/v1.20.2/libtokenizers.$(TARGETOS)-$(TARGETARCH).tar.gz | tar -xz -C lib
+	ranlib lib/*.a
 
 ##@ Development
 
@@ -37,14 +43,14 @@ format: ## Format Go source files
 test: test-unit
 
 .PHONY: test-unit
-test-unit:
+test-unit: download-tokenizer
 	@printf "\033[33;1m==== Running Unit Tests ====\033[0m\n"
-	go test -v ./...
+	go test -ldflags="$(LDFLAGS)" -v ./...
 
 .PHONY: test-integration
-test-integration:
+test-integration: download-tokenizer
 	@printf "\033[33;1m==== Running Integration Tests ====\033[0m\n"
-	go test -v -tags=integration_tests ./test/integration/
+	go test -ldflags="$(LDFLAGS)" -v -tags=integration_tests ./test/integration/
 
 .PHONY: post-deploy-test
 post-deploy-test: ## Run post deployment tests
@@ -59,9 +65,9 @@ lint: check-golangci-lint ## Run lint
 ##@ Build
 
 .PHONY: build
-build: check-go ##
+build: check-go download-tokenizer ##
 	@printf "\033[33;1m==== Building ====\033[0m\n"
-	go build -o bin/epp cmd/epp/main.go cmd/epp/health.go
+	go build -ldflags="$(LDFLAGS)" -o bin/epp cmd/epp/main.go cmd/epp/health.go
 
 ##@ Container Build/Push
 
@@ -74,7 +80,12 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 	  for arch in amd64; do \
 	    ARCH_TAG=$$FINAL_TAG-$$arch; \
 	    echo "📦 Building for architecture: $$arch"; \
-		buildah build --arch=$$arch --os=linux --layers -t $(IMG)-$$arch . || exit 1; \
+				buildah build \
+        			--arch=$$arch \
+        			--build-arg GIT_NM_USER=$(GIT_NM_USER) \
+                    --build-arg NM_TOKEN=$(NM_TOKEN) \
+        			--os=linux \
+        			--layers -t $(IMG)-$$arch . || exit 1; \
 	    echo "🚀 Pushing image: $(IMG)-$$arch"; \
 	    buildah push $(IMG)-$$arch docker://$(IMG)-$$arch || exit 1; \
 	  done; \
@@ -92,7 +103,11 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 	  sed -e '1 s/\(^FROM\)/FROM --platform=$${BUILDPLATFORM}/' Dockerfile > Dockerfile.cross; \
 	  - docker buildx create --use --name image-builder || true; \
 	  docker buildx use image-builder; \
-	  docker buildx build --push --platform=$(PLATFORMS) --tag $(IMG) -f Dockerfile.cross . || exit 1; \
+	  	  docker buildx build --push \
+      	  			--platform=$(PLATFORMS) \
+      	  			--build-arg GIT_NM_USER=$(GIT_NM_USER)\
+                      --build-arg NM_TOKEN=$(NM_TOKEN) \
+                      --tag $(IMG) -f Dockerfile.cross . || exit 1; \
 	  docker buildx rm image-builder || true; \
 	  rm Dockerfile.cross; \
 	elif [ "$(BUILDER)" = "podman" ]; then \
@@ -107,7 +122,12 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 .PHONY:	image-build
 image-build: check-container-tool load-version-json ## Build Docker image ## Build Docker image using $(CONTAINER_TOOL)
 	@printf "\033[33;1m==== Building Docker image $(IMG) ====\033[0m\n"
-	$(CONTAINER_TOOL) build --build-arg TARGETOS=$(TARGETOS) --build-arg TARGETARCH=$(TARGETARCH) -t $(IMG) .
+	$(CONTAINER_TOOL) build \
+ 		--build-arg TARGETOS=$(TARGETOS) \
+		--build-arg TARGETARCH=$(TARGETARCH) \
+		--build-arg GIT_NM_USER=$(GIT_NM_USER)\
+        --build-arg NM_TOKEN=$(NM_TOKEN) \
+ 		-t $(IMG) .
 
 .PHONY: image-push
 image-push: check-container-tool load-version-json ## Push Docker image $(IMG) to registry
