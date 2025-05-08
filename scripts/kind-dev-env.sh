@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This shell script deploys a kind cluster with a KGateway-based Gateway API
+# This shell script deploys a kind cluster with an Istio-based Gateway API
 # implementation fully configured. It deploys the vllm simulator, which it
 # exposes with a Gateway -> HTTPRoute -> InferencePool. The Gateway is
 # configured with the a filter for the ext_proc endpoint picker.
@@ -13,11 +13,8 @@ set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# TODO: get image names, paths, versions, etc. from the .version.json file
-# See: https://github.com/neuralmagic/gateway-api-inference-extension/issues/28
-
 # Set a default CLUSTER_NAME if not provided
-: "${CLUSTER_NAME:=llm-d-dev}"
+: "${CLUSTER_NAME:=llm-d-inference-scheduler-dev}"
 
 # Set the namespace to deploy the Gateway stack to
 : "${PROJECT_NAMESPACE:=default}"
@@ -56,13 +53,6 @@ for cmd in kind kubectl kustomize ${CONTAINER_RUNTIME}; do
         exit 1
     fi
 done
-
-# @TODO Make sure the EPP and vllm-sim images are present or built
-# EPP: `make image-load` in the GIE repo
-# vllm-sim: ``
-# note: you may need to retag the built images to match the expected path and
-# versions listed above
-# See: https://github.com/neuralmagic/gateway-api-inference-extension/issues/28
 
 # ------------------------------------------------------------------------------
 # Cluster Deployment
@@ -122,11 +112,15 @@ kustomize build --enable-helm deploy/environments/dev/kind-istio \
 	| envsubst \${POOL_NAME} | sed "s/REPLACE_NAMESPACE/${PROJECT_NAMESPACE}/gI" \
 	| kubectl --context ${KUBE_CONTEXT} apply -f -
 
-# Wait for all control-plane pods to be ready
-kubectl --context ${KUBE_CONTEXT} -n llm-d-istio-system wait --for=condition=Ready --all pods --timeout=360s
+# ------------------------------------------------------------------------------
+# Check & Verify
+# ------------------------------------------------------------------------------
 
-# Wait for all pods to be ready
-kubectl --context ${KUBE_CONTEXT} wait --for=condition=Ready --all pods --timeout=300s
+# Wait for all control-plane deployments to be ready
+kubectl --context ${KUBE_CONTEXT} -n llm-d-istio-system wait --for=condition=available --timeout=60s deployment --all
+
+# Wait for all deployments to be ready
+kubectl --context ${KUBE_CONTEXT} -n default wait --for=condition=available --timeout=60s deployment --all
 
 # Wait for the gateway to be ready
 kubectl --context ${KUBE_CONTEXT} wait gateway/inference-gateway --for=condition=Programmed --timeout=60s

@@ -12,7 +12,7 @@ set -eo pipefail
 # ------------------------------------------------------------------------------
 
 # Set a default CLUSTER_NAME if not provided
-: "${CLUSTER_NAME:=llm-d-dev}"
+: "${CLUSTER_NAME:=llm-d-inference-scheduler-dev}"
 
 # Set the default IMAGE_REGISTRY if not provided
 : "${IMAGE_REGISTRY:=quay.io/llm-d}"
