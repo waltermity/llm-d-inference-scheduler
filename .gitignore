@@ -7,6 +7,9 @@
 *.dll
 *.so
 *.dylib
+*.a
+main
+bin/
 
 # Test binary, built with `go test -c`
 *.test
@@ -21,4 +24,6 @@
 go.work
 go.work.sum
 
+# Environment Files
 .DS_Store
+.env

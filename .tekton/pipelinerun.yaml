@@ -19,6 +19,8 @@ spec:
       fsGroup: 0
     imagePullSecrets:
       - name: icr-secret
+    nodeSelector:
+      nvidia.com/gpu.product: "none"   # Ensures tasks run on non-GPU nodes
   params:
     - name: runOptional
       value: "true"
@@ -133,6 +135,8 @@ spec:
         workspaces:
           - name: source
             workspace: source
+          - name: git-auth
+            workspace: git-auth
 
       - name: go-test
         when:
@@ -149,6 +153,8 @@ spec:
         workspaces:
           - name: source
             workspace: source
+          - name: git-auth
+            workspace: git-auth
 
       - name: go-build
         when:
@@ -165,6 +171,8 @@ spec:
         workspaces:
           - name: source
             workspace: source
+          - name: git-auth
+            workspace: git-auth
 
       - name: extract-version-and-registry
         params:
@@ -328,6 +336,8 @@ spec:
             workspace: registry-secret
           - name: container-storage
             workspace: container-storage
+          - name: git-auth
+            workspace: git-auth
 
       - name: vulnerability-scan
         when:

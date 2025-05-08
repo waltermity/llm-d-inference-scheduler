@@ -16,6 +16,7 @@ spec:
     - name: registry
     - name: container-storage
       mountPath: /var/lib/containers
+    - name: git-auth
   steps:
     - name: build
       image: quay.io/buildah/stable:latest
@@ -34,7 +35,22 @@ spec:
         echo "🔧 IMAGE_TAG_BASE: $(params.image_tag_base)"
 
         echo "📦 Installing dependencies: make, jq..."
-        dnf install -y make jq && dnf clean all
+        dnf install -y make git jq && dnf clean all
+
+        echo "🔐 Extracting Git credentials from workspace..."
+        GIT_USER=$(cat /workspace/git-auth/username)
+        GIT_TOKEN=$(cat /workspace/git-auth/token)
+
+        if [ -z "$GIT_USER" ] || [ -z "$GIT_TOKEN" ]; then
+          echo "❌ Error: Missing git-auth credentials"
+          exit 1
+        fi
+
+        echo "🔐 Configuring Git..."
+        git config --global user.email "ci-tag-bot@example.com"
+        git config --global user.name "ci-tag-bot"
+        git config --global url."https://${GIT_USER}:${GIT_TOKEN}@github.com".insteadOf "https://github.com"
+        git config --global --add safe.directory "$(pwd)"
 
         echo "📁 Setting up registry credentials..."
         mkdir -p /root/.docker

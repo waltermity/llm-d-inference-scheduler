@@ -1,14 +1,17 @@
 SHELL := /usr/bin/env bash
 
 # Defaults
+TARGETOS ?= $(shell go env GOOS)
+TARGETARCH ?= $(shell go env GOARCH)
 PROJECT_NAME ?= llm-d-inference-scheduler
 DEV_VERSION ?= 0.0.1
 PROD_VERSION ?= 0.0.0
-IMAGE_TAG_BASE ?= quay.io/llm-d/$(PROJECT_NAME)
+IMAGE_REGISTRY ?= quay.io/llm-d
+IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(PROJECT_NAME)
 IMG = $(IMAGE_TAG_BASE):$(DEV_VERSION)
 NAMESPACE ?= hc4ai-operator
 
-CONTAINER_TOOL := $(shell command -v docker >/dev/null 2>&1 && echo docker || command -v podman >/dev/null 2>&1 && echo podman || echo "")
+CONTAINER_TOOL := $(shell { command -v docker >/dev/null 2>&1 && echo docker; } || { command -v podman >/dev/null 2>&1 && echo podman; } || echo "")
 BUILDER := $(shell command -v buildah >/dev/null 2>&1 && echo buildah || echo $(CONTAINER_TOOL))
 PLATFORMS ?= linux/amd64 # linux/arm64 # linux/s390x,linux/ppc64le
 
@@ -19,6 +22,17 @@ SRC = $(shell find . -type f -name '*.go')
 help: ## Print help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+# tokenizer & linking
+LDFLAGS ?= -extldflags '-L$(shell pwd)/lib'
+CGO_ENABLED=1
+
+.PHONY: download-tokenizer
+download-tokenizer: ## Download the HuggingFace tokenizer bindings.
+	@echo "Downloading HuggingFace tokenizer bindings..."
+	mkdir -p lib
+	curl -L https://github.com/daulet/tokenizers/releases/download/v1.20.2/libtokenizers.$(TARGETOS)-$(TARGETARCH).tar.gz | tar -xz -C lib
+	ranlib lib/*.a
+
 ##@ Development
 
 .PHONY: format
@@ -27,9 +41,17 @@ format: ## Format Go source files
 	@gofmt -l -w $(SRC)
 
 .PHONY: test
-test: check-ginkgo ## Run tests
-	@printf "\033[33;1m==== Running tests ====\033[0m\n"
-	ginkgo -r -v
+test: test-unit
+
+.PHONY: test-unit
+test-unit: download-tokenizer
+	@printf "\033[33;1m==== Running Unit Tests ====\033[0m\n"
+	go test -ldflags="$(LDFLAGS)" -v ./...
+
+.PHONY: test-integration
+test-integration: download-tokenizer
+	@printf "\033[33;1m==== Running Integration Tests ====\033[0m\n"
+	go test -ldflags="$(LDFLAGS)" -v -tags=integration_tests ./test/integration/
 
 .PHONY: post-deploy-test
 post-deploy-test: ## Run post deployment tests
@@ -44,22 +66,33 @@ lint: check-golangci-lint ## Run lint
 ##@ Build
 
 .PHONY: build
-build: check-go ##
+build: check-go download-tokenizer ##
 	@printf "\033[33;1m==== Building ====\033[0m\n"
-	go build -o bin/$(PROJECT_NAME) cmd/$(PROJECT_NAME)/main.go
+	go build -ldflags="$(LDFLAGS)" -o bin/epp cmd/epp/main.go cmd/epp/health.go
 
 ##@ Container Build/Push
 
 .PHONY: buildah-build
 buildah-build: check-builder load-version-json ## Build and push image (multi-arch if supported)
 	@echo "✅ Using builder: $(BUILDER)"
+ifndef GIT_NM_USER
+	$(error "GIT_NM_USER is not set")
+endif
+ifndef NM_TOKEN
+	$(error "NM_TOKEN is not set")
+endif
 	@if [ "$(BUILDER)" = "buildah" ]; then \
 	  echo "🔧 Buildah detected: Performing multi-arch build..."; \
 	  FINAL_TAG=$(IMG); \
 	  for arch in amd64; do \
 	    ARCH_TAG=$$FINAL_TAG-$$arch; \
 	    echo "📦 Building for architecture: $$arch"; \
-		buildah build --arch=$$arch --os=linux --layers -t $(IMG)-$$arch . || exit 1; \
+				buildah build \
+        			--arch=$$arch \
+        			--build-arg GIT_NM_USER=$(GIT_NM_USER) \
+                    --build-arg NM_TOKEN=$(NM_TOKEN) \
+        			--os=linux \
+        			--layers -t $(IMG)-$$arch . || exit 1; \
 	    echo "🚀 Pushing image: $(IMG)-$$arch"; \
 	    buildah push $(IMG)-$$arch docker://$(IMG)-$$arch || exit 1; \
 	  done; \
@@ -77,7 +110,11 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 	  sed -e '1 s/\(^FROM\)/FROM --platform=$${BUILDPLATFORM}/' Dockerfile > Dockerfile.cross; \
 	  - docker buildx create --use --name image-builder || true; \
 	  docker buildx use image-builder; \
-	  docker buildx build --push --platform=$(PLATFORMS) --tag $(IMG) -f Dockerfile.cross . || exit 1; \
+	  	  docker buildx build --push \
+      	  			--platform=$(PLATFORMS) \
+      	  			--build-arg GIT_NM_USER=$(GIT_NM_USER)\
+                      --build-arg NM_TOKEN=$(NM_TOKEN) \
+                      --tag $(IMG) -f Dockerfile.cross . || exit 1; \
 	  docker buildx rm image-builder || true; \
 	  rm Dockerfile.cross; \
 	elif [ "$(BUILDER)" = "podman" ]; then \
@@ -92,7 +129,18 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 .PHONY:	image-build
 image-build: check-container-tool load-version-json ## Build Docker image ## Build Docker image using $(CONTAINER_TOOL)
 	@printf "\033[33;1m==== Building Docker image $(IMG) ====\033[0m\n"
-	$(CONTAINER_TOOL) build --build-arg TARGETOS=$(TARGETOS) --build-arg TARGETARCH=$(TARGETARCH) -t $(IMG) .
+ifndef GIT_NM_USER
+	$(error "GIT_NM_USER is not set")
+endif
+ifndef NM_TOKEN
+	$(error "NM_TOKEN is not set")
+endif
+	$(CONTAINER_TOOL) build \
+ 		--build-arg TARGETOS=$(TARGETOS) \
+		--build-arg TARGETARCH=$(TARGETARCH) \
+		--build-arg GIT_NM_USER=$(GIT_NM_USER)\
+        --build-arg NM_TOKEN=$(NM_TOKEN) \
+ 		-t $(IMG) .
 
 .PHONY: image-push
 image-push: check-container-tool load-version-json ## Push Docker image $(IMG) to registry
@@ -135,7 +183,7 @@ install-k8s: check-kubectl check-kustomize check-envsubst ## Install on Kubernet
 	kubectl config set-context --current --namespace=$(NAMESPACE)
 	@echo "Deploying resources from deploy/ ..."
 	# Build the kustomization from deploy, substitute variables, and apply the YAML
-	kustomize build deploy | envsubst | kubectl apply -f -
+	kustomize build deploy/environments/openshift-base | envsubst | kubectl apply -f -
 	@echo "Waiting for pod to become ready..."
 	sleep 5
 	@POD=$$(kubectl get pod -l app=$(PROJECT_NAME)-statefulset -o jsonpath='{.items[0].metadata.name}'); \
@@ -148,7 +196,7 @@ uninstall-k8s: check-kubectl check-kustomize check-envsubst ## Uninstall from Ku
 	export PROJECT_NAME=${PROJECT_NAME}
 	export NAMESPACE=${NAMESPACE}
 	@echo "Removing resources from Kubernetes..."
-	kustomize build deploy | envsubst | kubectl delete --force -f - || true
+	kustomize build deploy/environments/openshift-base | envsubst | kubectl delete --force -f - || true
 	POD=$$(kubectl get pod -l app=$(PROJECT_NAME)-statefulset -o jsonpath='{.items[0].metadata.name}'); \
 	echo "Deleting pod: $$POD"; \
 	kubectl delete pod "$$POD" --force --grace-period=0 || true; \
@@ -163,7 +211,7 @@ install-openshift: check-kubectl check-kustomize check-envsubst ## Install on Op
 	kubectl create namespace $(NAMESPACE) 2>/dev/null || true
 	@echo "Deploying common resources from deploy/ ..."
 	# Build and substitute the base manifests from deploy, then apply them
-	kustomize build deploy | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl apply -n $(NAMESPACE) -f -
+	kustomize build deploy/environments/openshift-base | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl apply -n $(NAMESPACE) -f -
 	@echo "Waiting for pod to become ready..."
 	sleep 5
 	@POD=$$(kubectl get pod -l app=$(PROJECT_NAME)-statefulset -n $(NAMESPACE) -o jsonpath='{.items[0].metadata.name}'); \
@@ -174,7 +222,7 @@ install-openshift: check-kubectl check-kustomize check-envsubst ## Install on Op
 .PHONY: uninstall-openshift
 uninstall-openshift: check-kubectl check-kustomize check-envsubst ## Uninstall from OpenShift
 	@echo "Removing resources from OpenShift..."
-	kustomize build deploy | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl delete --force -f - || true
+	kustomize build deploy/environments/openshift-base | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl delete --force -f - || true
 	# @if kubectl api-resources --api-group=route.openshift.io | grep -q Route; then \
 	#   envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' < deploy/openshift/route.yaml | kubectl delete --force -f - || true; \
 	# fi
@@ -188,12 +236,12 @@ uninstall-openshift: check-kubectl check-kustomize check-envsubst ## Uninstall f
 .PHONY: install-rbac
 install-rbac: check-kubectl check-kustomize check-envsubst ## Install RBAC
 	@echo "Applying RBAC configuration from deploy/rbac..."
-	kustomize build deploy/rbac | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl apply -f -
+	kustomize build deploy/environments/openshift-base/rbac | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl apply -f -
 
 .PHONY: uninstall-rbac
 uninstall-rbac: check-kubectl check-kustomize check-envsubst ## Uninstall RBAC
 	@echo "Removing RBAC configuration from deploy/rbac..."
-	kustomize build deploy/rbac | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl delete -f - || true
+	kustomize build deploy/environments/openshift-base/rbac | envsubst '$$PROJECT_NAME $$NAMESPACE $$IMAGE_TAG_BASE $$VERSION' | kubectl delete -f - || true
 
 
 ##@ Version Extraction
@@ -223,7 +271,7 @@ extract-version-info: check-jq
 load-version-json: check-jq
 	@if [ "$(DEV_VERSION)" = "0.0.1" ]; then \
 	  DEV_VERSION=$$(jq -r '."dev-version"' .version.json); \
-	  PROD_VERSION=$$(jq -r '."dev-version"' .version.json); \
+	  PROD_VERSION=$$(jq -r '."prod-version"' .version.json); \
 	  echo "✔ Loaded DEV_VERSION from .version.json: $$DEV_VERSION"; \
 	  echo "✔ Loaded PROD_VERSION from .version.json: $$PROD_VERSION"; \
 	  export DEV_VERSION; \
@@ -341,3 +389,23 @@ print-project-name: ## Print the current project name
 .PHONY: install-hooks
 install-hooks: ## Install git hooks
 	git config core.hooksPath hooks
+
+# TODO: remove this once we're no longer using a GIE fork
+.PHONY: sync-gie-fork
+sync-gie-fork:
+	perl -pi -e 's/(replace\s+sigs\.k8s\.io\/gateway-api-inference-extension\s+=>\s+github\.com\/neuralmagic\/gateway-api-inference-extension\s+)\S+/$$1upstream-sync/' go.mod
+	go mod tidy
+	go mod verify
+
+##@ Dev Environments
+
+KIND_CLUSTER_NAME ?= llm-d-inference-scheduler-dev
+KIND_GATEWAY_HOST_PORT ?= 30080
+
+.PHONY: env-dev-kind
+env-dev-kind: image-build
+	GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
+	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+	EPP_IMAGE=$(PROJECT_NAME) \
+	EPP_TAG=$(DEV_VERSION) \
+		./scripts/kind-dev-env.sh
