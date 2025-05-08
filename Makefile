@@ -74,6 +74,12 @@ build: check-go download-tokenizer ##
 .PHONY: buildah-build
 buildah-build: check-builder load-version-json ## Build and push image (multi-arch if supported)
 	@echo "✅ Using builder: $(BUILDER)"
+ifndef GIT_NM_USER
+	$(error "GIT_NM_USER is not set")
+endif
+ifndef NM_TOKEN
+	$(error "NM_TOKEN is not set")
+endif
 	@if [ "$(BUILDER)" = "buildah" ]; then \
 	  echo "🔧 Buildah detected: Performing multi-arch build..."; \
 	  FINAL_TAG=$(IMG); \
@@ -122,6 +128,12 @@ buildah-build: check-builder load-version-json ## Build and push image (multi-ar
 .PHONY:	image-build
 image-build: check-container-tool load-version-json ## Build Docker image ## Build Docker image using $(CONTAINER_TOOL)
 	@printf "\033[33;1m==== Building Docker image $(IMG) ====\033[0m\n"
+ifndef GIT_NM_USER
+	$(error "GIT_NM_USER is not set")
+endif
+ifndef NM_TOKEN
+	$(error "NM_TOKEN is not set")
+endif
 	$(CONTAINER_TOOL) build \
  		--build-arg TARGETOS=$(TARGETOS) \
 		--build-arg TARGETARCH=$(TARGETARCH) \
