@@ -139,7 +139,7 @@ endif
  		--build-arg TARGETOS=$(TARGETOS) \
 		--build-arg TARGETARCH=$(TARGETARCH) \
 		--build-arg GIT_NM_USER=$(GIT_NM_USER)\
-        --build-arg NM_TOKEN=$(NM_TOKEN) \
+	        --build-arg NM_TOKEN=$(NM_TOKEN) \
  		-t $(IMG) .
 
 .PHONY: image-push
@@ -404,8 +404,8 @@ KIND_GATEWAY_HOST_PORT ?= 30080
 
 .PHONY: env-dev-kind
 env-dev-kind: image-build
+	CLUSTER_NAME=$(KIND_CLUSTER_NAME) \
 	GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
 	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
-	EPP_IMAGE=$(PROJECT_NAME) \
 	EPP_TAG=$(DEV_VERSION) \
 		./scripts/kind-dev-env.sh
