@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${VLLM_SIMULATOR_IMAGE:=vllm-sim}"
 
 # Set a default VLLM_SIMULATOR_TAG if not provided
-: "${VLLM_SIMULATOR_TAG:=0.0.2}"
+: "${VLLM_SIMULATOR_TAG:=0.0.4}"
 
 # Set a default EPP_IMAGE if not provided
 : "${EPP_IMAGE:=llm-d-inference-scheduler}"
