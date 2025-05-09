@@ -153,6 +153,8 @@ spec:
         workspaces:
           - name: source
             workspace: source
+          - name: registry
+            workspace: registry-secret
           - name: git-auth
             workspace: git-auth
 
