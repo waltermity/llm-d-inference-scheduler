@@ -16,9 +16,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Set a default CLUSTER_NAME if not provided
 : "${CLUSTER_NAME:=llm-d-inference-scheduler-dev}"
 
-# Set the namespace to deploy the Gateway stack to
-: "${PROJECT_NAMESPACE:=default}"
-
 # Set the host port to map to the Gateway's inbound port (30080)
 : "${GATEWAY_HOST_PORT:=30080}"
 
@@ -35,7 +32,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${EPP_IMAGE:=llm-d-inference-scheduler}"
 
 # Set a default EPP_TAG if not provided
-: "${EPP_TAG:=0.0.1}"
+: "${EPP_TAG:=0.0.2}"
 
 # Set the inference pool name for the deployment
 export POOL_NAME="${POOL_NAME:-vllm-llama3-8b-instruct}"
@@ -91,6 +88,7 @@ fi
 
 # Set the kubectl context to the kind cluster
 KUBE_CONTEXT="kind-${CLUSTER_NAME}"
+kubectl config set-context ${KUBE_CONTEXT} --namespace=default
 
 set -x
 
@@ -138,7 +136,7 @@ kustomize build --enable-helm deploy/components/crds-istio |
 
 # Deploy the environment to the "default" namespace
 kustomize build --enable-helm deploy/environments/dev/kind-istio \
-	| envsubst \${POOL_NAME} | sed "s/REPLACE_NAMESPACE/${PROJECT_NAMESPACE}/gI" \
+	| envsubst \${POOL_NAME} | envsubst \${EPP_TAG} \
 	| kubectl --context ${KUBE_CONTEXT} apply -f -
 
 # ------------------------------------------------------------------------------
@@ -146,13 +144,13 @@ kustomize build --enable-helm deploy/environments/dev/kind-istio \
 # ------------------------------------------------------------------------------
 
 # Wait for all control-plane deployments to be ready
-kubectl --context ${KUBE_CONTEXT} -n llm-d-istio-system wait --for=condition=available --timeout=60s deployment --all
+kubectl --context ${KUBE_CONTEXT} -n llm-d-istio-system wait --for=condition=available --timeout=300s deployment --all
 
 # Wait for all deployments to be ready
-kubectl --context ${KUBE_CONTEXT} -n default wait --for=condition=available --timeout=60s deployment --all
+kubectl --context ${KUBE_CONTEXT} -n default wait --for=condition=available --timeout=300s deployment --all
 
 # Wait for the gateway to be ready
-kubectl --context ${KUBE_CONTEXT} wait gateway/inference-gateway --for=condition=Programmed --timeout=60s
+kubectl --context ${KUBE_CONTEXT} wait gateway/inference-gateway --for=condition=Programmed --timeout=300s
 
 cat <<EOF
 -----------------------------------------
