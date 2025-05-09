@@ -1901,7 +1901,7 @@ data:
           }
         },
         "externalIstiod": false,
-        "hub": "gcr.io/istio-testing",
+        "hub": "quay.io/rh-ee-sutt/istio-testing",
         "imagePullPolicy": "",
         "imagePullSecrets": [],
         "istioNamespace": "llm-d-istio-system",

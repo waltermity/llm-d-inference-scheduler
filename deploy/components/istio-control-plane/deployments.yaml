@@ -96,7 +96,7 @@ spec:
               resource: limits.cpu
         - name: PLATFORM
           value: ""
-        image: gcr.io/istio-testing/pilot:1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
+        image: quay.io/rh-ee-sutt/istio-testing/pilot:1.26-alpha.9befed2f1439d883120f8de70fd70d84ca0ebc3d
         name: discovery
         ports:
         - containerPort: 8080
