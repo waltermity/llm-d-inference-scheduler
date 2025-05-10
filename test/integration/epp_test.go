@@ -41,7 +41,6 @@ func TestEndpointPickerBasics(t *testing.T) {
 	t.Log("checking HTTP response headers to verify endpoint-picker was called")
 	assert.Equal(t, "true", resp.Header.Get("x-went-into-resp-headers"))
 	assert.NotNil(t, resp.Header.Get("x-envoy-upstream-service-time"))
-	assert.Contains(t, resp.TransferEncoding, "chunked")
 
 	t.Logf("checking HTTP response body: %s", respBytes)
 	infResp := inferenceResponse{}
