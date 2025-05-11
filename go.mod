@@ -12,7 +12,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/neuralmagic/llm-d-kv-cache-manager v0.0.0-20250506190239-44ce55482124
+	github.com/neuralmagic/llm-d-kv-cache-manager v0.0.0-20250508211654-1fbe7c5f15e9
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
