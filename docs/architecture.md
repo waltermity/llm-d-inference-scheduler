@@ -6,7 +6,7 @@
 
 The design enables:
 - Support for **multiple base models** and **LoRA adapters** within a shared cluster [Not supported in Phase1]
-- Efficient routing based on **KV cache locality**, **prefix**, **load**, and **model metadata**
+- Efficient routing based on **KV cache locality**, **prefix**, **session affinity**, **load**, and **model metadata**
 - Disaggregated **Prefill/Decode (P/D)** execution
 - Pluggable **filters**, **scorers**, and **scrapers** for extensible routing
 
@@ -131,6 +131,7 @@ The **vLLM sidecar** handles orchestration between Prefill and Decode stages. It
 - Local memory management
 - Experimental protocol compatibility
 
+> **Note**: The detailed P/D design is available in this document: [Disaggregated Prefill/Decode in llm-d](./dp.md)
 ---
 
 ## InferencePool & InferenceModel Design
