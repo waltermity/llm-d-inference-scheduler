@@ -170,9 +170,8 @@ func TestPrefixAwareScorerProfiling(t *testing.T) {
 			}
 		}
 		sCtx := types.NewSchedulingContext(ctx, &types.LLMRequest{
-			Prompt:              text,
-			ResolvedTargetModel: modelName,
-			Model:               modelName,
+			Prompt:      text,
+			TargetModel: modelName,
 		}, nil, []types.Pod{})
 
 		// Score pods
