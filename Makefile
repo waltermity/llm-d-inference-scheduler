@@ -39,6 +39,12 @@ $(TOKENIZER_LIB):
 
 ##@ Development
 
+.PHONY: clean
+clean:
+	go clean -testcache -cache
+	rm -f $(TOKENIZER_LIB)
+	rmdir lib
+
 .PHONY: format
 format: ## Format Go source files
 	@printf "\033[33;1m==== Running gofmt ====\033[0m\n"
