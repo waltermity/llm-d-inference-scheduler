@@ -59,10 +59,9 @@ func TestPDSchedule(t *testing.T) {
 		{
 			name: "no pods in datastore",
 			req: &types.LLMRequest{
-				Model:               "any-model",
-				ResolvedTargetModel: "any-model",
-				Critical:            true,
-				Prompt:              "12345678901",
+				TargetModel: "any-model",
+				Critical:    true,
+				Prompt:      "12345678901",
 			},
 			input: []*backendmetrics.FakePodMetrics{},
 			err:   true,
@@ -70,10 +69,9 @@ func TestPDSchedule(t *testing.T) {
 		{
 			name: "one pod, short prompt",
 			req: &types.LLMRequest{
-				Model:               "critical",
-				ResolvedTargetModel: "critical",
-				Critical:            true,
-				Prompt:              "123",
+				TargetModel: "critical",
+				Critical:    true,
+				Prompt:      "123",
 			},
 			// pod2 will be picked because it is the only pod with Decode role
 			input: []*backendmetrics.FakePodMetrics{pod1, pod2},
@@ -86,10 +84,9 @@ func TestPDSchedule(t *testing.T) {
 		{
 			name: "1P1D",
 			req: &types.LLMRequest{
-				Model:               "critical",
-				ResolvedTargetModel: "critical",
-				Critical:            true,
-				Prompt:              "12345678901",
+				TargetModel: "critical",
+				Critical:    true,
+				Prompt:      "12345678901",
 			},
 			// pod2 will be picked because it is the decode pod, pod1 IP will be in header
 			input: []*backendmetrics.FakePodMetrics{pod1, pod2},

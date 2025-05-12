@@ -22,18 +22,28 @@ SRC = $(shell find . -type f -name '*.go')
 help: ## Print help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-# tokenizer & linking
+##@ Tokenizer & Linking
+
 LDFLAGS ?= -extldflags '-L$(shell pwd)/lib'
 CGO_ENABLED=1
+TOKENIZER_LIB = lib/libtokenizers.a
 
 .PHONY: download-tokenizer
-download-tokenizer: ## Download the HuggingFace tokenizer bindings.
+download-tokenizer: $(TOKENIZER_LIB)
+$(TOKENIZER_LIB):
+	## Download the HuggingFace tokenizer bindings.
 	@echo "Downloading HuggingFace tokenizer bindings..."
 	mkdir -p lib
 	curl -L https://github.com/daulet/tokenizers/releases/download/v1.20.2/libtokenizers.$(TARGETOS)-$(TARGETARCH).tar.gz | tar -xz -C lib
 	ranlib lib/*.a
 
 ##@ Development
+
+.PHONY: clean
+clean:
+	go clean -testcache -cache
+	rm -f $(TOKENIZER_LIB)
+	rmdir lib
 
 .PHONY: format
 format: ## Format Go source files
@@ -389,13 +399,6 @@ print-project-name: ## Print the current project name
 .PHONY: install-hooks
 install-hooks: ## Install git hooks
 	git config core.hooksPath hooks
-
-# TODO: remove this once we're no longer using a GIE fork
-.PHONY: sync-gie-fork
-sync-gie-fork:
-	perl -pi -e 's/(replace\s+sigs\.k8s\.io\/gateway-api-inference-extension\s+=>\s+github\.com\/neuralmagic\/gateway-api-inference-extension\s+)\S+/$$1upstream-sync/' go.mod
-	go mod tidy
-	go mod verify
 
 ##@ Dev Environments
 
