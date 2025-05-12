@@ -29,7 +29,8 @@ plugins needed by LLM-D (e.g. custom scorers, P/D Disaggregation, etc).
 
 > **WARNING**: This current requires you to have manually built the vllm
 > simulator separately on your local system. In a future iteration this will
-> be handled automatically and will not be required.
+> be handled automatically and will not be required. The tag for the simulator
+> currently needs to be `0.0.4`.
 
 You can deploy the current scheduler with a Gateway API implementation into a
 [Kubernetes in Docker (KIND)] cluster locally with the following:
