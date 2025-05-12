@@ -83,10 +83,10 @@ func initializeGateway() (err error) {
 
 	serverHeader := resp.Header.Get("Server")
 	if serverHeader == "" {
-		return fmt.Errorf(`expected gateway to return "envoy" server header, found no value`)
+		return fmt.Errorf(`expected gateway to return "istio-envoy" server header, found no value`)
 	}
-	if serverHeader != "envoy" {
-		return fmt.Errorf(`expected gateway to return "envoy" server header, found: %s`, serverHeader)
+	if serverHeader != "istio-envoy" {
+		return fmt.Errorf(`expected gateway to return "istio-envoy" server header, found: %s`, serverHeader)
 	}
 
 	return nil

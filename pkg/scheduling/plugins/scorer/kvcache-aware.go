@@ -75,7 +75,7 @@ func (s *KVCacheAwareScorer) Score(ctx *types.SchedulingContext, pods []types.Po
 		return nil
 	}
 
-	scores, err := s.kvCacheIndexer.GetPodScores(ctx.Context, ctx.Req.Prompt, ctx.Req.Model, nil)
+	scores, err := s.kvCacheIndexer.GetPodScores(ctx.Context, ctx.Req.Prompt, ctx.Req.TargetModel, nil)
 	if err != nil {
 		loggerDebug.Error(err, "Failed to get pod scores")
 		return nil

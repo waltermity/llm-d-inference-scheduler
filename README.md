@@ -25,36 +25,12 @@ plugins needed by LLM-D (e.g. custom scorers, P/D Disaggregation, etc).
 
 ## Development
 
-### Temporary Fork
-
-We're temporarily working with a fork of the [Gateway API Inference Extension
-(GIE)] instead of upstream:
-
-https://github.com/neuralmagic/gateway-api-inference-extension
-
-We're specifically using a branch called `upstream-sync` which is being kept
-up-to-date with upstream GIE, but includes some features that are being staged
-there while PRs are being worked on with upstream.
-
-To synchronize with this branch in the interim, you can't simply run `go get` as
-it will complain that the module name doesn't match. The following will provide
-a workaround to automatically synchronize the branch:
-
-```console
-make sync-gie-fork
-```
-
-This will fetch the latest `HEAD` of the `upstream-sync` branch, and will
-update both the `go.mod` and `go.sum` accordingly, which can then be checked in
-to git.
-
-[Gateway API Inference Extension (GIE)]:https://github.com/kubernetes-sigs/gateway-api-inference-extension
-
 ### Kind Development Environment
 
 > **WARNING**: This current requires you to have manually built the vllm
 > simulator separately on your local system. In a future iteration this will
-> be handled automatically and will not be required.
+> be handled automatically and will not be required. The tag for the simulator
+> currently needs to be `0.0.4`.
 
 You can deploy the current scheduler with a Gateway API implementation into a
 [Kubernetes in Docker (KIND)] cluster locally with the following:
@@ -75,9 +51,7 @@ There are several ways to access the gateway:
 $ kubectl --context kind-gie-dev port-forward service/inference-gateway 8080:80
 ```
 
-**NodePort `inference-gateway-istio`**
-> **Warning**: This method doesn't work on `podman` correctly, as `podman` support
-> with `kind` is not fully implemented yet.
+**NodePort**
 
 ```console
 # Determine the k8s node address
@@ -105,7 +79,7 @@ be overriden to any free port in the range of 30000 to 32767, by running the abo
 command as follows:
 
 ```console
-KIND_GATEWAY_HOST_PORT=<selected-port> make environment.dev.kind
+KIND_GATEWAY_HOST_PORT=<selected-port> make env-dev-kind
 ```
 
 **Where:** &lt;selected-port&gt; is the port on your local machine you want to use to

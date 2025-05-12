@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr/testr"
+
 	"github.com/google/go-cmp/cmp"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api-inference-extension/api/v1alpha2"
@@ -12,14 +14,13 @@ import (
 	backendmetrics "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/backend/metrics" // Import config for thresholds
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 
+	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/config"
 	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/pd"
 	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
 )
 
 // Tests the default scheduler configuration and expected behavior.
 func TestPDSchedule(t *testing.T) {
-	const promptLengthThreshold = 10
-
 	pod1 := &backendmetrics.FakePodMetrics{
 		Pod: &backend.Pod{
 			NamespacedName: k8stypes.NamespacedName{Name: "pod1"},
@@ -58,10 +59,9 @@ func TestPDSchedule(t *testing.T) {
 		{
 			name: "no pods in datastore",
 			req: &types.LLMRequest{
-				Model:               "any-model",
-				ResolvedTargetModel: "any-model",
-				Critical:            true,
-				Prompt:              "12345678901",
+				TargetModel: "any-model",
+				Critical:    true,
+				Prompt:      "12345678901",
 			},
 			input: []*backendmetrics.FakePodMetrics{},
 			err:   true,
@@ -69,10 +69,9 @@ func TestPDSchedule(t *testing.T) {
 		{
 			name: "one pod, short prompt",
 			req: &types.LLMRequest{
-				Model:               "critical",
-				ResolvedTargetModel: "critical",
-				Critical:            true,
-				Prompt:              "123",
+				TargetModel: "critical",
+				Critical:    true,
+				Prompt:      "123",
 			},
 			// pod2 will be picked because it is the only pod with Decode role
 			input: []*backendmetrics.FakePodMetrics{pod1, pod2},
@@ -85,10 +84,9 @@ func TestPDSchedule(t *testing.T) {
 		{
 			name: "1P1D",
 			req: &types.LLMRequest{
-				Model:               "critical",
-				ResolvedTargetModel: "critical",
-				Critical:            true,
-				Prompt:              "12345678901",
+				TargetModel: "critical",
+				Critical:    true,
+				Prompt:      "12345678901",
 			},
 			// pod2 will be picked because it is the decode pod, pod1 IP will be in header
 			input: []*backendmetrics.FakePodMetrics{pod1, pod2},
@@ -104,8 +102,13 @@ func TestPDSchedule(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			scheduler, _ := pd.NewScheduler(promptLengthThreshold, &fakeDataStore{pods: test.input})
-			got, err := scheduler.Schedule(context.Background(), test.req)
+			ctx := context.Background()
+			logger := testr.New(t)
+
+			schedCfg := config.NewConfig(logger)
+			// TODO - ensure that default config is ok here (no scorers) - issue #56
+			scheduler, _ := pd.NewScheduler(ctx, schedCfg, &fakeDataStore{pods: test.input})
+			got, err := scheduler.Schedule(ctx, test.req)
 
 			fmt.Printf("Test %s:\n", test.name)
 			fmt.Printf("Result: %#v\n", got)

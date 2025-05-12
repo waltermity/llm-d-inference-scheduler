@@ -48,6 +48,7 @@ func NewScheduler(threshold float32, datastore datastore.Datastore) *Scheduler {
 		},
 		&picker.MaxScorePicker{},
 		[]plugins.PostSchedule{},
+		[]plugins.PostResponse{},
 	))
 	scheduler.secondary = scheduling.NewSchedulerWithConfig(datastore, scheduling.NewSchedulerConfig(
 		[]plugins.PreSchedule{},
@@ -59,6 +60,7 @@ func NewScheduler(threshold float32, datastore datastore.Datastore) *Scheduler {
 		},
 		&picker.RandomPicker{},
 		[]plugins.PostSchedule{},
+		[]plugins.PostResponse{},
 	))
 
 	return scheduler

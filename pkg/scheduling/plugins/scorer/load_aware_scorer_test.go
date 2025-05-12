@@ -29,9 +29,8 @@ func TestLoadBasedScorer(t *testing.T) {
 			name:   "load based scorer",
 			scorer: scorer.NewLoadAwareScorer(),
 			req: &types.LLMRequest{
-				Model:               "critical",
-				ResolvedTargetModel: "critical",
-				Critical:            true,
+				TargetModel: "critical",
+				Critical:    true,
 			},
 			// pod2 will be picked because it has the shortest queue
 			input: []*backendmetrics.FakePodMetrics{
@@ -75,7 +74,10 @@ func TestLoadBasedScorer(t *testing.T) {
 			wantRes: &types.Result{
 				TargetPod: &types.ScoredPod{
 					Pod: &types.PodMetrics{
-						Pod: &backend.Pod{NamespacedName: k8stypes.NamespacedName{Name: "pod2"}},
+						Pod: &backend.Pod{
+							NamespacedName: k8stypes.NamespacedName{Name: "pod2"},
+							Labels:         map[string]string{},
+						},
 						Metrics: &backendmetrics.Metrics{
 							WaitingQueueSize:    0,
 							KVCacheUsagePercent: 0.2,
@@ -105,6 +107,7 @@ func TestLoadBasedScorer(t *testing.T) {
 				},
 				&picker.MaxScorePicker{},
 				[]plugins.PostSchedule{},
+				[]plugins.PostResponse{},
 			))
 			got, err := scheduler.Schedule(context.Background(), test.req)
 			if test.err != (err != nil) {

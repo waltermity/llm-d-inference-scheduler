@@ -22,4 +22,4 @@ resources:
 
 images:
 - name: quay.io/llm-d/llm-d-inference-scheduler
-  newTag: 0.0.1
+  newTag: ${EPP_TAG}

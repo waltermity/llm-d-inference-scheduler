@@ -16,7 +16,9 @@ import (
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 	logutil "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
 
+	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/config"
 	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
+	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
 )
 
 const (
@@ -26,11 +28,11 @@ const (
 
 // Scheduler implements the disaggreagted P/D scheduling logic
 type Scheduler struct {
-	threshold  int
-	targetPort int32
-	store      scheduling.Datastore
-	prefill    requestcontrol.Scheduler
-	decode     requestcontrol.Scheduler
+	threshold int
+	pdEnabled bool
+	store     Datastore
+	prefill   requestcontrol.Scheduler
+	decode    requestcontrol.Scheduler
 }
 
 var _ requestcontrol.Scheduler = &Scheduler{} // validate interface conformance
@@ -44,34 +46,29 @@ type Datastore interface {
 }
 
 // NewScheduler returns a new disaggregated Prefill/Decode filter, using the
-// provided prompt length threshold.
-// TODO: accept a configuration object with pd-enable, threshold,
-// scorers and their weights, etc. (tracked in issue #9).
-func NewScheduler(threshold int, ds Datastore) (*Scheduler, error) {
-	pool, err := ds.PoolGet()
-	if err != nil {
-		return nil, err
-	}
-
+// provided configuration.
+func NewScheduler(ctx context.Context, schedCfg *config.Config, ds Datastore) (*Scheduler, error) {
 	scheduler := &Scheduler{
-		threshold:  threshold,
-		targetPort: pool.Spec.TargetPortNumber,
-		store:      ds,
+		threshold: schedCfg.PDThreshold,
+		pdEnabled: schedCfg.PDEnabled,
+		store:     ds,
 	}
 
 	scheduler.prefill = scheduling.NewSchedulerWithConfig(ds, scheduling.NewSchedulerConfig(
 		[]plugins.PreSchedule{},
 		[]plugins.Filter{&filter.PrefillFilter{}},
-		map[plugins.Scorer]int{}, // TODO: KVCacheAware, LoadBased and weights
+		scorersFromConfig(ctx, schedCfg.PrefillSchedulerScorers),
 		picker.NewMaxScorePicker(),
 		[]plugins.PostSchedule{},
+		[]plugins.PostResponse{},
 	))
 	scheduler.decode = scheduling.NewSchedulerWithConfig(ds, scheduling.NewSchedulerConfig(
 		[]plugins.PreSchedule{},
 		[]plugins.Filter{&filter.DecodeFilter{}},
-		map[plugins.Scorer]int{}, // TODO: KVCacheAware, LoadBased
+		scorersFromConfig(ctx, schedCfg.DecodeSchedulerScorers),
 		picker.NewMaxScorePicker(),
 		[]plugins.PostSchedule{},
+		[]plugins.PostResponse{},
 	))
 	return scheduler, nil
 }
@@ -92,12 +89,15 @@ func (s *Scheduler) Schedule(ctx context.Context, req *types.LLMRequest) (*types
 		metrics.RecordSchedulerE2ELatency(time.Since(scheduleStart))
 	}()
 
+	if !s.pdEnabled {
+		debugLog.Info("Disagregated prefill/decode disabled - scheduling to decode worker only")
+		return s.decode.Schedule(ctx, req)
+	}
+
 	if len(req.Prompt) < s.threshold { // schedule on decode only (TODO: or p/d disabled)
 		debugLog.Info("Scheduling to decode worker only")
 		return s.decode.Schedule(ctx, req)
 	}
-
-	debugLog.Info("Scheduling to separate Prefill and Decode workers")
 
 	res, err := s.prefill.Schedule(ctx, req) // prefill pod
 	if err != nil {
@@ -105,13 +105,50 @@ func (s *Scheduler) Schedule(ctx context.Context, req *types.LLMRequest) (*types
 	}
 
 	if res.TargetPod != nil { // record the prefill worker
+		pool, err := s.store.PoolGet()
+		if err != nil {
+			debugLog.Error(err, "Get inference pool failed - scheduling to decode worker only")
+			return s.decode.Schedule(ctx, req)
+		}
+
 		// TODO: should the scheme be conifgurable (e.g., https://)?
-		prefillURL := fmt.Sprintf("http://%s:%d", res.TargetPod.GetPod().Address, s.targetPort)
+		prefillURL := fmt.Sprintf("http://%s:%d", res.TargetPod.GetPod().Address, pool.Spec.TargetPortNumber)
 		if req.Headers == nil { // TODO should always be populated?
 			req.Headers = make(map[string]string)
 		}
 		req.Headers[PrefillPodHeader] = prefillURL
 	}
 
+	debugLog.Info("Scheduling to separate Prefill and Decode workers")
+
 	return s.decode.Schedule(ctx, req) // decode pod
+}
+
+// OnResponse normally processes all LLMResponses it is a no-op for the P/D
+// scheduler.
+func (s *Scheduler) OnResponse(_ context.Context, _ *types.LLMResponse, _ string) {
+	// no-op
+}
+
+func scorersFromConfig(ctx context.Context, scorersConfig map[string]int) map[plugins.Scorer]int {
+	scorers := map[plugins.Scorer]int{}
+
+	for scorerName, scorerWeight := range scorersConfig {
+		switch scorerName {
+		case config.KVCacheScorerName:
+			scorer, err := scorer.NewKVCacheAwareScorer(ctx)
+			if err == nil {
+				scorers[scorer] = scorerWeight
+			}
+		case config.LoadAwareScorerName:
+			scorers[&scorer.LoadAwareScorer{}] = scorerWeight
+		case config.PrefixScorerName:
+			// TODO - create config? based on what? - issue #55
+			scorers[scorer.NewPrefixAwareScorer(nil)] = scorerWeight
+		case config.SessionAwareScorerName:
+			scorers[scorer.NewSessionAffinity()] = scorerWeight
+		}
+	}
+
+	return scorers
 }
