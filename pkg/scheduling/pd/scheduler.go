@@ -60,6 +60,7 @@ func NewScheduler(ctx context.Context, schedCfg *config.Config, ds Datastore) (*
 		scorersFromConfig(ctx, schedCfg.PrefillSchedulerScorers),
 		picker.NewMaxScorePicker(),
 		[]plugins.PostSchedule{},
+		[]plugins.PostResponse{},
 	))
 	scheduler.decode = scheduling.NewSchedulerWithConfig(ds, scheduling.NewSchedulerConfig(
 		[]plugins.PreSchedule{},
@@ -67,6 +68,7 @@ func NewScheduler(ctx context.Context, schedCfg *config.Config, ds Datastore) (*
 		scorersFromConfig(ctx, schedCfg.DecodeSchedulerScorers),
 		picker.NewMaxScorePicker(),
 		[]plugins.PostSchedule{},
+		[]plugins.PostResponse{},
 	))
 	return scheduler, nil
 }
@@ -120,6 +122,12 @@ func (s *Scheduler) Schedule(ctx context.Context, req *types.LLMRequest) (*types
 	debugLog.Info("Scheduling to separate Prefill and Decode workers")
 
 	return s.decode.Schedule(ctx, req) // decode pod
+}
+
+// OnResponse normally processes all LLMResponses it is a no-op for the P/D
+// scheduler.
+func (s *Scheduler) OnResponse(_ context.Context, _ *types.LLMResponse, _ string) {
+	// no-op
 }
 
 func scorersFromConfig(ctx context.Context, scorersConfig map[string]int) map[plugins.Scorer]int {

@@ -97,7 +97,7 @@ func TestPrefixAwareScorer(t *testing.T) {
 			podToAdd:    pod1.NamespacedName,
 			prefixModel: "model1",
 			expectedScores: map[types.Pod]float64{
-				pod1: 0.5, // Pod1 matches with weight
+				pod1: 1.0, // Pod1 matches with weight
 				pod2: 0.0, // Pod2 doesn't match
 			}, // Weight affects score
 		},
@@ -125,8 +125,8 @@ func TestPrefixAwareScorer(t *testing.T) {
 
 			// Create test context
 			sCtx := types.NewSchedulingContext(ctx, &types.LLMRequest{
-				Prompt:              tt.prompt,
-				ResolvedTargetModel: tt.modelName,
+				Prompt:      tt.prompt,
+				TargetModel: tt.modelName,
 			}, nil, []types.Pod{})
 
 			// Score pods
