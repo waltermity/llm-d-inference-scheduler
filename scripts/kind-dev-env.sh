@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${GATEWAY_HOST_PORT:=30080}"
 
 # Set the default IMAGE_REGISTRY if not provided
-: "${IMAGE_REGISTRY:=quay.io/llm-d}"
+: "${IMAGE_REGISTRY:=ghcr.io/llm-d}"
 
 # Set a default VLLM_SIMULATOR_IMAGE if not provided
 : "${VLLM_SIMULATOR_IMAGE:=vllm-sim}"

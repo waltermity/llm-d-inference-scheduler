@@ -18,7 +18,7 @@ spec:
       terminationGracePeriodSeconds: 130
       containers:
       - name: epp
-        image: quay.io/llm-d/llm-d-inference-scheduler:latest
+        image: ghcr.io/llm-d/llm-d-inference-scheduler:latest
         imagePullPolicy: IfNotPresent
         args:
         - -poolName

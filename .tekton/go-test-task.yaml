@@ -55,16 +55,16 @@ spec:
         echo "🔐 Extracting Quay Credentials..."
         mkdir -p /root/.docker
         cp /workspace/registry/.dockerconfigjson /root/.docker/config.json
-        QUAY_USERNAME=$(jq -r '.auths["quay.io"].username' /root/.docker/config.json)
-        QUAY_PASSWORD=$(jq -r '.auths["quay.io"].password' /root/.docker/config.json)
+        QUAY_USERNAME=$(jq -r '.auths["ghcr.io"].username' /root/.docker/config.json)
+        QUAY_PASSWORD=$(jq -r '.auths["ghcr.io"].password' /root/.docker/config.json)
         if [ "$QUAY_USERNAME" = "null" ] || [ "$QUAY_PASSWORD" = "null" ]; then
           echo "❌ Error: Missing registry credentials"
           exit 1
         fi
 
         echo "Pulling the vllm simulator image"
-        podman login quay.io --username ${QUAY_USERNAME} --password ${QUAY_PASSWORD}
-        podman pull quay.io/llm-d/vllm-sim:0.0.4
+        podman login ghcr.io --username ${QUAY_USERNAME} --password ${QUAY_PASSWORD}
+        podman pull ghcr.io/llm-d/vllm-sim:0.0.4
 
         echo "Setting up a Kind cluster for integration tests"
         export CONTAINER_TOOL=podman

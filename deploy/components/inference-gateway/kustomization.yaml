@@ -21,5 +21,5 @@ resources:
 - httproutes.yaml
 
 images:
-- name: quay.io/llm-d/llm-d-inference-scheduler
+- name: ghcr.io/llm-d/llm-d-inference-scheduler
   newTag: ${EPP_TAG}

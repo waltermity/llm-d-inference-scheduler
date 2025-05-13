@@ -6,7 +6,7 @@ TARGETARCH ?= $(shell go env GOARCH)
 PROJECT_NAME ?= llm-d-inference-scheduler
 DEV_VERSION ?= 0.0.3
 PROD_VERSION ?= 0.0.2
-IMAGE_REGISTRY ?= quay.io/llm-d
+IMAGE_REGISTRY ?= ghcr.io/llm-d
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(PROJECT_NAME)
 IMG = $(IMAGE_TAG_BASE):$(DEV_VERSION)
 NAMESPACE ?= hc4ai-operator
@@ -287,7 +287,7 @@ load-version-json: check-jq
 	  export DEV_VERSION; \
 	  export PROD_VERSION; \
 	fi && \
-	CURRENT_DEFAULT="quay.io/llm-d/$(PROJECT_NAME)"; \
+	CURRENT_DEFAULT="ghcr.io/llm-d/$(PROJECT_NAME)"; \
 	if [ "$(IMAGE_TAG_BASE)" = "$$CURRENT_DEFAULT" ]; then \
 	  IMAGE_TAG_BASE=$$(jq -r '."dev-registry"' .version.json); \
 	  echo "✔ Loaded IMAGE_TAG_BASE from .version.json: $$IMAGE_TAG_BASE"; \
