@@ -115,7 +115,7 @@ func TestPrefixAwareScorer(t *testing.T) {
 			config := scorer.DefaultPrefixStoreConfig()
 			config.BlockSize = 5 // set small chunking for testing
 
-			s := scorer.NewPrefixAwareScorer(config)
+			s := scorer.NewPrefixAwareScorer(ctx, config)
 
 			// Add prefix if specified
 			if tt.prefixToAdd != "" {
@@ -161,7 +161,7 @@ func TestPrefixAwareScorerProfiling(t *testing.T) {
 	t.Run(testName, func(t *testing.T) {
 		start := time.Now() // record start time
 		config := scorer.DefaultPrefixStoreConfig()
-		s := scorer.NewPrefixAwareScorer(config)
+		s := scorer.NewPrefixAwareScorer(ctx, config)
 		for i := range nPodsInStore {
 			prompt := text[0 : (i+1)*config.BlockSize-1]
 			err := s.GetPrefixStore().AddEntry(modelName, prompt, &name2Pod["pod"+strconv.Itoa(i)].NamespacedName)
