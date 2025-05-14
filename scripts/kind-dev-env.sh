@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${IMAGE_REGISTRY:=ghcr.io/llm-d}"
 
 # Set a default VLLM_SIMULATOR_IMAGE if not provided
-: "${VLLM_SIMULATOR_IMAGE:=vllm-sim}"
+: "${VLLM_SIMULATOR_IMAGE:=llm-d-inference-sim}"
 
 # Set a default VLLM_SIMULATOR_TAG if not provided
 : "${VLLM_SIMULATOR_TAG:=0.0.4}"
