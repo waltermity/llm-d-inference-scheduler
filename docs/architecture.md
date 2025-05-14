@@ -80,35 +80,30 @@ These components are maintained in the `llm-d-inference-scheduler` repository an
 
 | Scorer           | Description                                | Env Vars |
 |------------------|--------------------------------------------|----------|
-| Session-aware    | Prefers pods from same session             | `ENABLE_SESSION_AWARE_SCORER`, `SESSION_AWARE_SCORER_WEIGHT` |
-| Prefix-aware     | Matches prompt prefix                      | `ENABLE_PREFIX_AWARE_SCORER`, `PREFIX_AWARE_SCORER_WEIGHT` |
-| KVCache-aware    | Optimizes for KV reuse                     | `ENABLE_KVCACHE_AWARE_SCORER`, `KVCACHE_INDEXER_REDIS_ADDR`, `HF_TOKEN` |
-| Load-aware       | Avoids busy pods                           | `ENABLE_LOAD_AWARE_SCORER`, `LOAD_AWARE_SCORER_WEIGHT` |
+| Session-aware    | Prefers pods from same session             | `ENABLE_SESSION_AWARE_SCORER`, `SESSION_AWARE_SCORER_WEIGHT`, `PREFILL_ENABLE_SESSION_AWARE_SCORER`, `PREFILL_SESSION_AWARE_SCORER_WEIGHT` |
+| Prefix-aware     | Matches prompt prefix                      | `ENABLE_PREFIX_AWARE_SCORER`, `PREFIX_AWARE_SCORER_WEIGHT`, `PREFILL_ENABLE_PREFIX_AWARE_SCORER`, `PREFILL_PREFIX_AWARE_SCORER_WEIGHT` |
+| KVCache-aware    | Optimizes for KV reuse                     | `ENABLE_KVCACHE_AWARE_SCORER`, `KVCACHE_INDEXER_REDIS_ADDR`, `PREFILL_ENABLE_KVCACHE_AWARE_SCORER`, `PREFILL_KVCACHE_INDEXER_REDIS_ADDR`, `HF_TOKEN`, `KVCACHE_INDEXER_REDIS_ADDR` |
+| Load-aware       | Avoids busy pods                           | `ENABLE_LOAD_AWARE_SCORER`, `LOAD_AWARE_SCORER_WEIGHT`, `PREFILL_ENABLE_LOAD_AWARE_SCORER`, `PREFILL_LOAD_AWARE_SCORER_WEIGHT` |
 
 ### Prefill / Decode Configuration
+
+In case Disaggrigated Prefill is enabled, you should also define the following environment variables. 
 
 - Toggle P/D mode: `PD_ENABLED=true`
 - Threshold: `PD_PROMPT_LEN_THRESHOLD=<value>`
 
 #### Prefill Scorers:
 ```bash
+export PREFILL_ENABLE_SESSION_AWARE_SCORER=true
+export PREFILL_SESSION_AWARE_SCORER_WEIGHT=1
 export PREFILL_ENABLE_KVCACHE_AWARE_SCORER=true
-export PREFILL_KVCACHE_AWARE_SCORER_WEIGHT=1.0
+export PREFILL_KVCACHE_AWARE_SCORER_WEIGHT=1
 export PREFILL_ENABLE_LOAD_AWARE_SCORER=true
-export PREFILL_LOAD_AWARE_SCORER_WEIGHT=1.0
+export PREFILL_LOAD_AWARE_SCORER_WEIGHT=1
 export PREFILL_ENABLE_PREFIX_AWARE_SCORER=true
-export PREFILL_PREFIX_AWARE_SCORER_WEIGHT=1.0
+export PREFILL_PREFIX_AWARE_SCORER_WEIGHT=1
 ```
 
-#### Decode Scorers:
-```bash
-export DECODE_ENABLE_KVCACHE_AWARE_SCORER=true
-export DECODE_KVCACHE_AWARE_SCORER_WEIGHT=1.0
-export DECODE_ENABLE_LOAD_AWARE_SCORER=true
-export DECODE_LOAD_AWARE_SCORER_WEIGHT=1.0
-export DECODE_ENABLE_PREFIX_AWARE_SCORER=true
-export DECODE_PREFIX_AWARE_SCORER_WEIGHT=1.0
-```
 
 ---
 
@@ -139,25 +134,7 @@ The **vLLM sidecar** handles orchestration between Prefill and Decode stages. It
 ### Current Assumptions
 - Single `InferencePool` and single `EPP` due to Envoy limitations
 - Model-based filtering can be handled within EPP
-
-### Alternatives
-
-#### EPP/Base Model Coupling
-- GIE assumes one EPP per model
-- llm-d needs one EPP serving multiple models
-- Potential solution: use Envoy route matching to dispatch to appropriate logic
-
-#### Unified Pool vs. Model-Specific Pools
-- Unified: One pool with runtime filtering
-- Split: Pools per model with stricter guarantees
-
-#### InferenceModel CRs
-- Current GIE: One CR per base model + one per LoRA adapter
-- Problems: Too many CRs, high controller load
-
-**Alternatives:**
-- Move adapter logic to runtime (filters/scrapers)
-- Use structured configuration in a single CR to support multiple adapters
+- Currently only one base model is supported
 
 ---
 
