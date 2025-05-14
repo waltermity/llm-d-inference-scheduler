@@ -27,7 +27,7 @@ func TestPDSchedule(t *testing.T) {
 			Address:        "1.2.3.4",
 			Labels:         map[string]string{filter.RoleLabel: filter.RolePrefill},
 		},
-		Metrics: &backendmetrics.Metrics{},
+		Metrics: &backendmetrics.MetricsState{},
 	}
 	pod2 := &backendmetrics.FakePodMetrics{
 		Pod: &backend.Pod{
@@ -35,7 +35,7 @@ func TestPDSchedule(t *testing.T) {
 			Address:        "5.6.7.8",
 			Labels:         map[string]string{filter.RoleLabel: filter.RoleDecode},
 		},
-		Metrics: &backendmetrics.Metrics{},
+		Metrics: &backendmetrics.MetricsState{},
 	}
 	wantPod2 := &types.PodMetrics{
 		Pod: &backend.Pod{
@@ -43,7 +43,7 @@ func TestPDSchedule(t *testing.T) {
 			Address:        "5.6.7.8",
 			Labels:         map[string]string{filter.RoleLabel: filter.RoleDecode},
 		},
-		Metrics: &backendmetrics.Metrics{
+		MetricsState: &backendmetrics.MetricsState{
 			ActiveModels:  map[string]int{},
 			WaitingModels: map[string]int{},
 		},
