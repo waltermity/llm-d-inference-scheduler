@@ -26,7 +26,7 @@ func TestPrefixAwareScorer(t *testing.T) {
 				Namespace: "default",
 			},
 		},
-		Metrics: &backendmetrics.Metrics{},
+		MetricsState: &backendmetrics.MetricsState{},
 	}
 	pod2 := &types.PodMetrics{
 		Pod: &backend.Pod{
@@ -35,7 +35,7 @@ func TestPrefixAwareScorer(t *testing.T) {
 				Namespace: "default",
 			},
 		},
-		Metrics: &backendmetrics.Metrics{},
+		MetricsState: &backendmetrics.MetricsState{},
 	}
 
 	tests := []struct {
@@ -205,7 +205,7 @@ func createPods(nPods int) map[string]*types.PodMetrics {
 					Namespace: "default",
 				},
 			},
-			Metrics: &backendmetrics.Metrics{},
+			MetricsState: &backendmetrics.MetricsState{},
 		}
 		res[pShortName] = pod
 	}

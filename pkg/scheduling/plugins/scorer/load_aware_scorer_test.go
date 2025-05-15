@@ -37,7 +37,7 @@ func TestLoadBasedScorer(t *testing.T) {
 			input: []*backendmetrics.FakePodMetrics{
 				{
 					Pod: &backend.Pod{NamespacedName: k8stypes.NamespacedName{Name: "pod1"}},
-					Metrics: &backendmetrics.Metrics{
+					Metrics: &backendmetrics.MetricsState{
 						WaitingQueueSize:    2,
 						KVCacheUsagePercent: 0.2,
 						MaxActiveModels:     2,
@@ -49,7 +49,7 @@ func TestLoadBasedScorer(t *testing.T) {
 				},
 				{
 					Pod: &backend.Pod{NamespacedName: k8stypes.NamespacedName{Name: "pod2"}},
-					Metrics: &backendmetrics.Metrics{
+					Metrics: &backendmetrics.MetricsState{
 						WaitingQueueSize:    0,
 						KVCacheUsagePercent: 0.2,
 						MaxActiveModels:     2,
@@ -61,7 +61,7 @@ func TestLoadBasedScorer(t *testing.T) {
 				},
 				{
 					Pod: &backend.Pod{NamespacedName: k8stypes.NamespacedName{Name: "pod3"}},
-					Metrics: &backendmetrics.Metrics{
+					Metrics: &backendmetrics.MetricsState{
 						WaitingQueueSize:    5,
 						KVCacheUsagePercent: 0.2,
 						MaxActiveModels:     2,
@@ -79,7 +79,7 @@ func TestLoadBasedScorer(t *testing.T) {
 							NamespacedName: k8stypes.NamespacedName{Name: "pod2"},
 							Labels:         map[string]string{},
 						},
-						Metrics: &backendmetrics.Metrics{
+						MetricsState: &backendmetrics.MetricsState{
 							WaitingQueueSize:    0,
 							KVCacheUsagePercent: 0.2,
 							MaxActiveModels:     2,
