@@ -17,9 +17,9 @@ import (
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 	logutil "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
 
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/config"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/config"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
 )
 
 const (

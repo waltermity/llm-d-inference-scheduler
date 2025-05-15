@@ -8,7 +8,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
 )
 
 // TestBasicPrefixOperations tests the basic functionality of adding and finding prefixes

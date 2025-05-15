@@ -8,12 +8,12 @@ RUN dnf install -y gcc-c++ libstdc++ libstdc++-devel clang && dnf clean all
 
 WORKDIR /workspace
 
-## NeuralMagic internal repos pull config
+## llm-d internal repos pull config
 ARG GIT_NM_USER
 ARG NM_TOKEN
 ### use git token
 RUN echo -e "machine github.com\n\tlogin ${GIT_NM_USER}\n\tpassword ${NM_TOKEN}" >> ~/.netrc
-ENV GOPRIVATE=github.com/neuralmagic
+ENV GOPRIVATE=github.com/llm-d
 ENV GIT_TERMINAL_PROMPT=1
 
 # Copy the Go Modules manifests

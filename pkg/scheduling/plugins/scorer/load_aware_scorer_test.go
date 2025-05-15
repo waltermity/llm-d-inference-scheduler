@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/plugins/picker"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/plugins/scorer"
 )
 
 func TestLoadBasedScorer(t *testing.T) {
