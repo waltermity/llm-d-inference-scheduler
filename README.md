@@ -43,7 +43,7 @@ GIE. If you have something that's _llm-d specific_ then it should go here. If
 you're not sure whether your feature belongs here or in the GIE, feel free to
 create a [discussion] or ask on [Slack].
 
-[create an issue]:https://github.com/neuralmagic/llm-d-inference-scheduler/issues/new
+[create an issue]:https://github.com/llm-d/llm-d-inference-scheduler/issues/new
 [Gateway API Inference Extension (GIE)]:https://github.com/kubernetes-sigs/gateway-api-inference-extension
-[discussion]:https://github.com/neuralmagic/llm-d-inference-scheduler/discussions/new?category=q-a
+[discussion]:https://github.com/llm-d/llm-d-inference-scheduler/discussions/new?category=q-a
 [Slack]:https://llm-d.slack.com/

@@ -14,9 +14,9 @@ import (
 	backendmetrics "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/backend/metrics" // Import config for thresholds
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/scheduling/types"
 
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/config"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/pd"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/config"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/pd"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/plugins/filter"
 )
 
 // Tests the default scheduler configuration and expected behavior.

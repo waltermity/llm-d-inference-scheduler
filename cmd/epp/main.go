@@ -51,9 +51,9 @@ import (
 	runserver "sigs.k8s.io/gateway-api-inference-extension/pkg/epp/server"
 	"sigs.k8s.io/gateway-api-inference-extension/pkg/epp/util/logging"
 
-	"github.com/neuralmagic/llm-d-inference-scheduler/internal/controller/runnable"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/config"
-	"github.com/neuralmagic/llm-d-inference-scheduler/pkg/scheduling/pd"
+	"github.com/llm-d/llm-d-inference-scheduler/internal/controller/runnable"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/config"
+	"github.com/llm-d/llm-d-inference-scheduler/pkg/scheduling/pd"
 )
 
 const (

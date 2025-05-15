@@ -61,7 +61,7 @@ func (s *SessionAffinity) Score(ctx *types.SchedulingContext, pods []types.Pod) 
 // PostResponse sets the session header on the response sent to the client
 // TODO: this should be using a cookie and ensure not overriding any other
 // cookie values if present.
-// Tracked in https://github.com/neuralmagic/llm-d-inference-scheduler/issues/28
+// Tracked in https://github.com/llm-d/llm-d-inference-scheduler/issues/28
 func (s *SessionAffinity) PostResponse(ctx *types.SchedulingContext, pod types.Pod) {
 	ctx.Req.Headers[sessionTokenHeader] = base64.StdEncoding.EncodeToString([]byte(pod.GetPod().NamespacedName.String()))
 }
