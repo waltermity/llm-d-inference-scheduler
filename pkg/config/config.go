@@ -50,8 +50,13 @@ const (
 	pdPromptLenThresholdEnvKey  = "PD_PROMPT_LEN_THRESHOLD"
 	pdPromptLenThresholdDefault = 100
 
-	prefixScorerBlockSizeEnvKey  = "PREFIX_SCORER_BLOCK_SIZE"
-	prefixScorerBlockSizeDefault = 256
+	prefixCacheCapacityEnvKey = "PREFIX_SCORER_CACHE_CAPACITY"
+	// DefaultPrefixCacheCapacity defines the default value for maximum number of blocks the LRU cache can store.
+	DefaultPrefixCacheCapacity = 500000
+
+	prefixScorerCacheBlockSizeEnvKey = "PREFIX_SCORER_CACHE_BLOCK_SIZE"
+	// DefaultPrefixCacheBlockSize defines the default value of how many runes each block contains in the prefix cache.
+	DefaultPrefixCacheBlockSize = 256
 )
 
 // Config contains scheduler configuration, currently configuration is loaded from environment variables
@@ -60,7 +65,8 @@ type Config struct {
 	PrefillSchedulerPlugins map[string]int
 	PDEnabled               bool
 	PDThreshold             int
-	PrefixBlockSize         int
+	PrefixCacheBlockSize    int
+	PrefixCacheCapacity     int
 }
 
 // LoadConfig loads configuration from environment variables and returns a new instance of Config
@@ -77,7 +83,8 @@ func LoadConfig(logger logr.Logger) *Config {
 		PrefillSchedulerPlugins: loadPluginInfo(logger, true, pluginNames),
 		PDEnabled:               env.GetEnvString(pdEnabledEnvKey, "false", logger) == "true",
 		PDThreshold:             env.GetEnvInt(pdPromptLenThresholdEnvKey, pdPromptLenThresholdDefault, logger),
-		PrefixBlockSize:         env.GetEnvInt(prefixScorerBlockSizeEnvKey, prefixScorerBlockSizeDefault, logger),
+		PrefixCacheBlockSize:    env.GetEnvInt(prefixScorerCacheBlockSizeEnvKey, DefaultPrefixCacheBlockSize, logger),
+		PrefixCacheCapacity:     env.GetEnvInt(prefixCacheCapacityEnvKey, DefaultPrefixCacheCapacity, logger),
 	}
 }
 
