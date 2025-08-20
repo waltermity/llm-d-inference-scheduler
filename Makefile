@@ -321,12 +321,18 @@ KIND_CLUSTER_NAME ?= llm-d-inference-scheduler-dev
 KIND_GATEWAY_HOST_PORT ?= 30080
 
 .PHONY: env-dev-kind
-env-dev-kind: image-build  ## Run under kind ($(KIND_CLUSTER_NAME))
-	CLUSTER_NAME=$(KIND_CLUSTER_NAME) \
-	GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
-	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
-	EPP_TAG=$(EPP_TAG) \
-		./scripts/kind-dev-env.sh
+env-dev-kind: ## Run under kind ($(KIND_CLUSTER_NAME))
+	@if [ "$$PD_ENABLED" = "true" ] && [ "$$KV_CACHE_ENABLED" = "true" ]; then \
+		echo "Error: Both PD_ENABLED and KV_CACHE_ENABLED are true. Skipping env-dev-kind."; \
+		exit 1; \
+	else \
+		$(MAKE) image-build && \
+		CLUSTER_NAME=$(KIND_CLUSTER_NAME) \
+		GATEWAY_HOST_PORT=$(KIND_GATEWAY_HOST_PORT) \
+		IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+		EPP_TAG=$(EPP_TAG) \
+		./scripts/kind-dev-env.sh; \
+	fi
 
 .PHONY: clean-env-dev-kind
 clean-env-dev-kind:      ## Cleanup kind setup (delete cluster $(KIND_CLUSTER_NAME))

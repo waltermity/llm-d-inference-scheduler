@@ -32,11 +32,10 @@ spec:
         - -grpcHealthPort
         - "9003"
         env:
-        - name: PD_ENABLED
-          value: '${PD_ENABLED}'
-        - name: PD_PROMPT_LEN_THRESHOLD
-          value: '${PD_PROMPT_LEN_THRESHOLD}'
+        - name: PYTHONHASHSEED
+          value: "42"
         ports:
+        - containerPort: 5557
         - containerPort: 9002
         - containerPort: 9003
         - name: metrics
@@ -56,7 +55,11 @@ spec:
         volumeMounts:
         - name: epp-config
           mountPath: /etc/epp
+        - name: cache
+          mountPath: /cache
       volumes:
       - name: epp-config
         configMap:
           name: epp-config
+      - name: cache
+        emptyDir: {}
