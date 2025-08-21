@@ -26,6 +26,7 @@ spec:
         - "--block-size=16"
         - "--zmq-endpoint=tcp://${EPP_NAME}.default.svc.cluster.local:5557"
         - "--event-batch-size=16"
+        - "--tokenizers-cache-dir=/tokenizer-cache"
         ports:
         - name: http
           containerPort: 8000
@@ -35,4 +36,10 @@ spec:
           value: "8000"
         - name: PYTHONHASHSEED
           value: "42"
+        volumeMounts:
+        - name: tokenizer-cache
+          mountPath: /tokenizer-cache
+      volumes:
+      - name: tokenizer-cache
+        emptyDir: {}
 
