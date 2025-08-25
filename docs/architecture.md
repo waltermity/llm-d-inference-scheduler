@@ -355,6 +355,21 @@ Pods with requests in the queue will get score between 0.5 and 0.
 
 ---
 
+#### ActiveRequestScorer
+
+Scores pods based on the number of active requests being served per pod. Each request is tracked 
+individually with its own TTL to ensure accurate timeout handling. Pods with fewer active 
+requests receive higher scores.
+
+Scores are normalized to a range of 0-1, where pods with fewer active requests get higher scores.
+
+- **Type**: `active-request-scorer`
+- **Parameters**:
+  - `requestTimeout`: specifies the timeout for requests in seconds. Once a request is "in-flight" 
+    for this duration, it is considered timed out and automatically removed.
+
+---
+
 #### SessionAffinity
 
 Scores the candidate pods by giving a higher score to the pods that were previously
