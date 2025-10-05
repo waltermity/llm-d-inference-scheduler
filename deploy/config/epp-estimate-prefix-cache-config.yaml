@@ -8,9 +8,11 @@ plugins:
 - type: prefix-cache-scorer
 - type: load-aware-scorer
 - type: max-score-picker
+- type: qos-filter
 schedulingProfiles:
 - name: default
   plugins:
+  - pluginRef: qos-filter
   - pluginRef: decode-filter
   - pluginRef: prefix-cache-scorer
     weight: 1.0

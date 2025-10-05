@@ -4,7 +4,9 @@ gateway_url="http://localhost:30080"
 
 try:
     endpoint = f"{gateway_url}/v1/models"
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json",
+               "x-qos": "premium"
+    }
     
     r = requests.get(endpoint, headers=headers, timeout=10)
     r.raise_for_status()
@@ -20,7 +22,7 @@ try:
     print("\n\nCompletion result:", resp.json())
 except Exception as e:
     print(f"Error: {e}")
-
+'''
 try:
     #---------------Mistral 7B Instruct---------------------
     completion_endpoint = f"{gateway_url}/v1/completions"
@@ -35,5 +37,5 @@ try:
     print("\n\nMistral completion result:", resp.json())
 except Exception as e:
     print(f"Error: {e}")
-
+'''
     

@@ -16,6 +16,7 @@ plugins:
   - type: kv-cache-utilization-scorer
   - type: queue-scorer
   - type: max-score-picker
+  - type: qos-filter
 schedulingProfiles:
   - name: default
     plugins:
@@ -27,3 +28,4 @@ schedulingProfiles:
       - pluginRef: queue-scorer
         weight: 1.0
       - pluginRef: max-score-picker
+      - pluginRef: qos-filter

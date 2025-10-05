@@ -14,6 +14,7 @@ func RegisterAllPlugins() {
 	plugins.Register(filter.ByLabelSelectorType, filter.ByLabelSelectorFactory)
 	plugins.Register(filter.DecodeRoleType, filter.DecodeRoleFactory)
 	plugins.Register(filter.PrefillRoleType, filter.PrefillRoleFactory)
+	plugins.Register(filter.QoSType, filter.QoSFactory)
 	plugins.Register(prerequest.PrefillHeaderHandlerType, prerequest.PrefillHeaderHandlerFactory)
 	plugins.Register(profile.PdProfileHandlerType, profile.PdProfileHandlerFactory)
 	plugins.Register(scorer.PrecisePrefixCachePluginType, scorer.PrecisePrefixCachePluginFactory)
