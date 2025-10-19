@@ -12,6 +12,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+patchesJson6902:
+  - target:
+      version: v1
+      group: apps
+      kind: Deployment
+      name: ${MODEL_NAME_SAFE}-vllm-sim
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 0
+
 resources:
-- ../base-kind-istio/
-- ../../../components/vllm-sim/
+  - ../base-kind-istio/
+  - ../../../components/vllm-sim/
+  - patches/vllm-sim-qos.yaml

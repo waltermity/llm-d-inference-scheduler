@@ -71,7 +71,7 @@ func (f *QoSFilter) WithName(name string) *QoSFilter {
 
 // Filter filters pods based on request header value.
 // If the header is missing/empty, the filter is a no-op (returns original pods).
-// Pods whose label value equals the header value OR equals "both" are kept.
+// Pods whose label value equals the header value OR equals "all" are kept.
 func (f *QoSFilter) Filter(ctx context.Context, _ *types.CycleState, request *types.LLMRequest, pods []types.Pod) []types.Pod {
     logger := log.FromContext(ctx).WithName(f.typedName.String())
 
@@ -93,7 +93,7 @@ func (f *QoSFilter) Filter(ctx context.Context, _ *types.CycleState, request *ty
             continue
         }
         l := strings.ToLower(strings.TrimSpace(mp.Labels[f.label]))
-        if l == val || l == "both" {
+        if l == val || l == "all" {
             filtered = append(filtered, p)
         }
     }
