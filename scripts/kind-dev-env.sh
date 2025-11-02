@@ -199,6 +199,11 @@ kustomize build --enable-helm  ${KUSTOMIZE_DIR} \
   ${VLLM_REPLICA_COUNT} ${VLLM_REPLICA_COUNT_P} ${VLLM_REPLICA_COUNT_D}' \
   | kubectl --context ${KUBE_CONTEXT} apply -f -
 
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.5.0/components.yaml
+
+kubectl patch -n kube-system deployment metrics-server --type=json \
+  -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
 # ------------------------------------------------------------------------------
 # Check & Verify
 # ------------------------------------------------------------------------------
@@ -237,3 +242,5 @@ See DEVELOPMENT.md for additional access methods if the above fails.
 
 -----------------------------------------
 EOF
+
+kubectl proxy --port=8080
