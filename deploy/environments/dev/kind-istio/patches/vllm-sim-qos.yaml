@@ -40,6 +40,13 @@ spec:
           value: ${POOL_NAME}
         - name: LISTEN_ADDR
           value: ":8000"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
 
 ---
 apiVersion: apps/v1
@@ -181,8 +188,8 @@ spec:
           value: ":8000"
         resources:
           requests:
-            cpu: "1m"
+            cpu: "1"
             memory: "128Mi"
           limits:
-            cpu: "1m"
+            cpu: "1"
             memory: "128Mi"

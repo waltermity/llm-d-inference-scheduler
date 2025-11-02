@@ -39,7 +39,7 @@ export IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/llm-d}"
 # -----------------------------------------------------------------------------
 
 # Full Hugging Face model name to deploy
-export MODEL_NAME="${MODEL_NAME:-mistralai/Mistral-7B-Instruct-v0.2}"
+export MODEL_NAME="${MODEL_NAME:-Qwen/Qwen2.5-0.5B-Instruct}"
 
 # Extract model family (e.g., "meta-llama" from "meta-llama/Llama-3.1-8B-Instruct")
 export MODEL_FAMILY="${MODEL_NAME%%/*}"
@@ -75,7 +75,7 @@ export EPP_NAME="${EPP_NAME:-${MODEL_NAME_SAFE}-endpoint-picker}"
 export EPP_IMAGE="${EPP_IMAGE:-${IMAGE_REGISTRY}/llm-d-inference-scheduler}"
 
 # EPP image tag
-export EPP_TAG="${EPP_TAG:-v0.3.0}"
+export EPP_TAG="${EPP_TAG:-dev}"
 
 # Whether P/D mode is enabled for this deployment
 export PD_ENABLED="\"${PD_ENABLED:-false}\""
@@ -184,7 +184,7 @@ helm upgrade --install "$VLLM_HELM_RELEASE_NAME" "$VLLM_CHART_DIR" \
   --set vllm.resources.limits."nvidia\.com/gpu"="$VLLM_GPU_COUNT_PER_INSTANCE" \
   --set vllm.gpuMemoryUtilization="${VLLM_GPU_MEMORY_UTILIZATION}" \
   --set vllm.tensorParallelSize="${VLLM_TENSOR_PARALLEL_SIZE}" \
-  --set persistence.enabled=true \
+  --set persistence.enabled=false \
   --set persistence.size="$PVC_SIZE" \
   --set lmcache.redis.enabled=true \
   --set lmcache.redis.nameSuffix="$REDIS_DEPLOYMENT_NAME" \
