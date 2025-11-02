@@ -9,6 +9,11 @@ from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Config (env override)
 GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:30080")
@@ -23,7 +28,7 @@ METRICS_URL = os.getenv("METRICS_URL", "http://localhost:8081/metrics")
 METRIC_NAME = os.getenv("METRIC_NAME", "idle_util")
 
 RUNS = int(os.getenv("RUNS", "100"))
-PHASE_REQUESTS = int(os.getenv("PHASE_REQUESTS", "10"))
+PHASE_REQUESTS = int(os.getenv("PHASE_REQUESTS", "1000"))
 CONCURRENCY = int(os.getenv("CONCURRENCY", "1"))
 SAMPLE_INTERVAL = float(os.getenv("SAMPLE_INTERVAL", "0.5"))
 TIMEOUT_S = float(os.getenv("REQ_TIMEOUT_S", "60"))
@@ -388,6 +393,134 @@ def main():
         for pod, cnt in sorted(prem_pod_hits.items(), key=lambda x: -x[1]):
             print(f"- {pod}: {cnt}")
     print(f"Total errors (premium): {prem_errors}")
+
+    # ----------------------------
+    # Visualization (like test.py)
+    # ----------------------------
+    # Build DataFrames
+    df_ttfb = pd.DataFrame({
+        "value_ms": std_ttfb + prem_ttfb,
+        "qos": (["standard"] * len(std_ttfb)) + (["premium"] * len(prem_ttfb)),
+    })
+    df_total = pd.DataFrame({
+        "value_ms": std_total + prem_total,
+        "qos": (["standard"] * len(std_total)) + (["premium"] * len(prem_total)),
+    })
+
+    # TTFB histogram (overlaid, shared bins)
+    if not df_ttfb.empty:
+        ttfb_all = df_ttfb["value_ms"].to_numpy()
+        ttfb_bins = np.histogram_bin_edges(ttfb_all, bins=40)
+        ax = df_ttfb[df_ttfb.qos == "standard"]["value_ms"].plot(
+            kind="hist", bins=ttfb_bins, density=True, alpha=0.5,
+            label=f"standard (n={len(std_ttfb)})", figsize=(6, 4)
+        )
+        df_ttfb[df_ttfb.qos == "premium"]["value_ms"].plot(
+            kind="hist", bins=ttfb_bins, density=True, alpha=0.5,
+            label=f"premium (n={len(prem_ttfb)})", ax=ax
+        )
+        plt.xlabel("TTFB (ms)"); plt.ylabel("Density"); plt.title("TTFB histogram by QoS")
+        plt.legend(); plt.tight_layout(); plt.savefig("hist_ttfb.png", dpi=150); plt.close()
+
+    # Total latency histogram (overlaid, shared bins)
+    if not df_total.empty:
+        total_all = df_total["value_ms"].to_numpy()
+        total_bins = np.histogram_bin_edges(total_all, bins=40)
+        ax = df_total[df_total.qos == "standard"]["value_ms"].plot(
+            kind="hist", bins=total_bins, density=True, alpha=0.5,
+            label=f"standard (n={len(std_total)})", figsize=(6, 4)
+        )
+        df_total[df_total.qos == "premium"]["value_ms"].plot(
+            kind="hist", bins=total_bins, density=True, alpha=0.5,
+            label=f"premium (n={len(prem_total)})", ax=ax
+        )
+        plt.xlabel("Total latency (ms)"); plt.ylabel("Density"); plt.title("Total latency histogram by QoS")
+        plt.legend(); plt.tight_layout(); plt.savefig("hist_total.png", dpi=150); plt.close()
+
+    # ECDFs for TTFB
+    def ecdf(x):
+        x = np.sort(np.asarray(x)); y = np.arange(1, len(x) + 1) / len(x); return x, y
+    if std_ttfb and prem_ttfb:
+        x_s, y_s = ecdf(std_ttfb); x_p, y_p = ecdf(prem_ttfb)
+        plt.figure(figsize=(6,4))
+        plt.plot(x_s, y_s, label=f"standard (n={len(std_ttfb)})")
+        plt.plot(x_p, y_p, label=f"premium (n={len(prem_ttfb)})")
+        plt.xlabel("TTFB (ms)"); plt.ylabel("ECDF"); plt.title("TTFB ECDF by QoS")
+        plt.grid(True, alpha=0.2); plt.legend(); plt.tight_layout(); plt.savefig("ecdf_ttfb.png", dpi=150); plt.close()
+
+    # CCDF (tails) on log scale
+    def ccdf(x):
+        x = np.sort(np.asarray(x)); y = 1.0 - (np.arange(1, len(x)+1) / len(x)); return x, y
+    if std_ttfb and prem_ttfb:
+        xs, ys = ccdf(std_ttfb); xp, yp = ccdf(prem_ttfb)
+        plt.figure(figsize=(6,4))
+        plt.semilogy(xs, ys, label=f"standard (n={len(std_ttfb)})")
+        plt.semilogy(xp, yp, label=f"premium (n={len(prem_ttfb)})")
+        plt.xlabel("TTFB (ms)"); plt.ylabel("CCDF (1-CDF)"); plt.title("TTFB tail (log scale)")
+        plt.grid(True, which="both", alpha=0.2); plt.legend()
+        plt.tight_layout(); plt.savefig("ccdf_ttfb.png", dpi=150); plt.close()
+    if std_total and prem_total:
+        xs, ys = ccdf(std_total); xp, yp = ccdf(prem_total)
+        plt.figure(figsize=(6,4))
+        plt.semilogy(xs, ys, label=f"standard (n={len(std_total)})")
+        plt.semilogy(xp, yp, label=f"premium (n={len(prem_total)})")
+        plt.xlabel("Total (ms)"); plt.ylabel("CCDF (1-CDF)"); plt.title("Total latency tail (log scale)")
+        plt.grid(True, which="both", alpha=0.2); plt.legend()
+        plt.tight_layout(); plt.savefig("ccdf_total.png", dpi=150); plt.close()
+
+    # Box plots
+    if not df_ttfb.empty:
+        plt.figure(figsize=(6,4))
+        df_ttfb.boxplot(by="qos", column="value_ms", grid=False)
+        plt.title("TTFB by QoS"); plt.suptitle(""); plt.xlabel("QoS"); plt.ylabel("ms")
+        plt.tight_layout(); plt.savefig("box_ttfb.png", dpi=150); plt.close()
+    if not df_total.empty:
+        plt.figure(figsize=(6,4))
+        df_total.boxplot(by="qos", column="value_ms", grid=False)
+        plt.title("Total latency by QoS"); plt.suptitle(""); plt.xlabel("QoS"); plt.ylabel("ms")
+        plt.tight_layout(); plt.savefig("box_total.png", dpi=150); plt.close()
+
+    # Percentile bars (p50/p95/p99)
+    def pct_of(arr, p): return np.percentile(arr, p) if arr else float("nan")
+    stats_rows = []
+    stats_rows.append(("ttfb", "standard", pct_of(std_ttfb,50), pct_of(std_ttfb,95), pct_of(std_ttfb,99)))
+    stats_rows.append(("ttfb", "premium",  pct_of(prem_ttfb,50), pct_of(prem_ttfb,95), pct_of(prem_ttfb,99)))
+    stats_rows.append(("total", "standard", pct_of(std_total,50), pct_of(std_total,95), pct_of(std_total,99)))
+    stats_rows.append(("total", "premium",  pct_of(prem_total,50), pct_of(prem_total,95), pct_of(prem_total,99)))
+    df_stats = pd.DataFrame(stats_rows, columns=["metric","qos","p50","p95","p99"])
+    for metric in ["ttfb","total"]:
+        sub = df_stats[df_stats.metric == metric]
+        if sub.empty: continue
+        x = np.arange(len(sub["qos"])); w = 0.25
+        fig, ax = plt.subplots(figsize=(6,4))
+        ax.bar(x - w, sub["p50"], width=w, label="p50")
+        ax.bar(x,       sub["p95"], width=w, label="p95")
+        ax.bar(x + w, sub["p99"], width=w, label="p99")
+        ax.set_xticks(x); ax.set_xticklabels(list(sub["qos"]))
+        ax.set_ylabel("ms"); ax.set_title(f"{metric.upper()} percentiles by QoS")
+        ax.legend(); fig.tight_layout()
+        fig.savefig(f"bars_{metric}_percentiles.png", dpi=150); plt.close(fig)
+
+    # Per-pod hits (stacked) if headers were propagated
+    if std_pod_hits or prem_pod_hits:
+        pods = sorted(set(list(std_pod_hits.keys()) + list(prem_pod_hits.keys())))
+        std_counts = [std_pod_hits.get(p, 0) for p in pods]
+        prm_counts = [prem_pod_hits.get(p, 0) for p in pods]
+        x = np.arange(len(pods)); w = 0.6
+        fig, ax = plt.subplots(figsize=(max(6, len(pods)*0.6), 4))
+        ax.bar(x, std_counts, width=w, label="standard")
+        ax.bar(x, prm_counts, width=w, bottom=std_counts, label="premium")
+        ax.set_xticks(x); ax.set_xticklabels(pods, rotation=45, ha="right")
+        ax.set_ylabel("Requests"); ax.set_title("Per-pod hit counts by QoS")
+        ax.legend(); fig.tight_layout()
+        fig.savefig("bars_per_pod_hits.png", dpi=150); plt.close(fig)
+
+    # Save raw samples
+    df_samples = pd.concat([
+        df_ttfb.assign(metric="ttfb"),
+        df_total.assign(metric="total"),
+    ], ignore_index=True)
+    df_samples.to_csv("latency_samples.csv", index=False)
 
 if __name__ == "__main__":
     main()
