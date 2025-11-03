@@ -7,10 +7,15 @@ SHELL := /usr/bin/env bash
 TARGETOS ?= $(shell go env GOOS)
 TARGETARCH ?= $(shell go env GOARCH)
 PROJECT_NAME ?= llm-d-inference-scheduler
+SIDECAR_IMAGE_NAME ?= llm-d-routing-sidecar
+SIDECAR_NAME ?= pd-sidecar
 IMAGE_REGISTRY ?= ghcr.io/llm-d
 IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(PROJECT_NAME)
 EPP_TAG ?= dev
 IMG = $(IMAGE_TAG_BASE):$(EPP_TAG)
+SIDECAR_TAG ?= dev
+SIDECAR_IMAGE_TAG_BASE ?= $(IMAGE_REGISTRY)/$(SIDECAR_IMAGE_NAME)
+SIDECAR_IMG = $(SIDECAR_IMAGE_TAG_BASE):$(SIDECAR_TAG)
 NAMESPACE ?= hc4ai-operator
 
 # Map go arch to typos arch
@@ -46,6 +51,16 @@ BUILD_REF ?= $(shell git describe --abbrev=0 2>/dev/null)
 # go source files
 SRC = $(shell find . -type f -name '*.go')
 
+# Internal variables for generic targets
+epp_IMAGE = $(IMG)
+sidecar_IMAGE = $(SIDECAR_IMG)
+epp_NAME = epp
+sidecar_NAME = $(SIDECAR_NAME)
+epp_LDFLAGS = -ldflags="$(LDFLAGS)"
+sidecar_LDFLAGS =
+epp_TEST_FILES = go list ./... | grep -v /test/ | grep -v ./pkg/sidecar/
+sidecar_TEST_FILES = go list ./pkg/sidecar/...
+
 .PHONY: help
 help: ## Print help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -56,7 +71,7 @@ LDFLAGS ?= -extldflags '-L$(shell pwd)/lib'
 CGO_ENABLED=1
 TOKENIZER_LIB = lib/libtokenizers.a
 # Extract RELEASE_VERSION from Dockerfile
-TOKENIZER_VERSION := $(shell grep '^ARG RELEASE_VERSION=' Dockerfile | cut -d'=' -f2)
+TOKENIZER_VERSION := $(shell grep '^ARG RELEASE_VERSION=' Dockerfile.epp | cut -d'=' -f2)
 
 .PHONY: download-tokenizer
 download-tokenizer: $(TOKENIZER_LIB)
@@ -84,9 +99,12 @@ format: ## Format Go source files
 test: test-unit test-e2e ## Run unit tests and e2e tests
 
 .PHONY: test-unit
-test-unit: download-tokenizer install-dependencies ## Run unit tests
+test-unit: test-unit-epp test-unit-sidecar
+
+.PHONY: test-unit-%
+test-unit-%: download-tokenizer install-dependencies ## Run unit tests
 	@printf "\033[33;1m==== Running Unit Tests ====\033[0m\n"
-	go test -ldflags="$(LDFLAGS)" -v $$(echo $$(go list ./... | grep -v /test/))
+	go test $($*_LDFLAGS) -cover -coverprofile=coverage-$*.out -v $$($($*_TEST_FILES) | tr '\n' ' ')
 
 .PHONY: test-integration
 test-integration: download-tokenizer install-dependencies ## Run integration tests
@@ -112,27 +130,36 @@ lint: check-golangci-lint check-typos ## Run lint
 ##@ Build
 
 .PHONY: build
-build: check-go install-dependencies download-tokenizer ## Build the project
+build: build-epp build-sidecar ## Build the project
+
+.PHONY: build-%
+build-%: check-go install-dependencies download-tokenizer ## Build the project
 	@printf "\033[33;1m==== Building ====\033[0m\n"
-	go build -ldflags="$(LDFLAGS)" -o bin/epp cmd/epp/main.go
+	go build $($*_LDFLAGS) -o bin/$($*_NAME) cmd/$($*_NAME)/main.go
 
 ##@ Container Build/Push
 
 .PHONY:	image-build
-image-build: check-container-tool ## Build Docker image ## Build Docker image using $(CONTAINER_TOOL)
-	@printf "\033[33;1m==== Building Docker image $(IMG) ====\033[0m\n"
+image-build: image-build-epp image-build-sidecar ## Build Docker image
+
+.PHONY:	image-build-%
+image-build-%: check-container-tool ## Build Docker image ## Build Docker image using $(CONTAINER_TOOL)
+	@printf "\033[33;1m==== Building Docker image $($*_IMAGE) ====\033[0m\n"
 	$(CONTAINER_TOOL) build \
 		--platform linux/$(TARGETARCH) \
  		--build-arg TARGETOS=linux \
 		--build-arg TARGETARCH=$(TARGETARCH) \
 		--build-arg COMMIT_SHA=${GIT_COMMIT_SHA} \
 		--build-arg BUILD_REF=${BUILD_REF} \
- 		-t $(IMG) .
+ 		-t $($*_IMAGE) -f Dockerfile.$* .
 
 .PHONY: image-push
-image-push: check-container-tool ## Push Docker image $(IMG) to registry
-	@printf "\033[33;1m==== Pushing Docker image $(IMG) ====\033[0m\n"
-	$(CONTAINER_TOOL) push $(IMG)
+image-push: image-push-epp image-push-sidecar ## Push Docker images to registry
+
+.PHONY: image-push-%
+image-push-%: check-container-tool load-version-json ## Push Docker image to registry
+	@printf "\033[33;1m==== Pushing Docker image $($*_IMAGE) ====\033[0m\n"
+	$(CONTAINER_TOOL) push $($*_IMAGE)
 
 ##@ Install/Uninstall Targets
 
