@@ -16,19 +16,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Config (env override)
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:30080")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8080")
 COMPLETIONS_ENDPOINT = f"{GATEWAY_URL}/v1/completions"
-MODEL_NAME = os.getenv("MODEL_NAME", "food-review")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-0.5B-Instruct")
 # Adjust to correct port
 METRICS_API_BASE = os.getenv("METRICS_API_BASE", "http://127.0.0.1:8081")
 NAMESPACE = os.getenv("NAMESPACE", "default")
-EPP_NAME_CONTAINS = os.getenv("EPP_NAME_CONTAINS", "endpoint-picker")
+EPP_NAME_CONTAINS = os.getenv("EPP_NAME_CONTAINS", "scheduling-epp")
 
 METRICS_URL = os.getenv("METRICS_URL", "http://localhost:8081/metrics")
 METRIC_NAME = os.getenv("METRIC_NAME", "idle_util")
 
 RUNS = int(os.getenv("RUNS", "100"))
-PHASE_REQUESTS = int(os.getenv("PHASE_REQUESTS", "1000"))
+PHASE_REQUESTS = int(os.getenv("PHASE_REQUESTS", "10"))
 CONCURRENCY = int(os.getenv("CONCURRENCY", "1"))
 SAMPLE_INTERVAL = float(os.getenv("SAMPLE_INTERVAL", "0.5"))
 TIMEOUT_S = float(os.getenv("REQ_TIMEOUT_S", "60"))
@@ -191,16 +191,17 @@ class K8sPhaseMetricsSampler:
                 epp_cpu, epp_mem, epp_n = summarize_group_avgs(items, name_contains=self.epp_name_contains)
                 qos_cpu, qos_mem, qos_n = summarize_group_avgs(items, label_eq=("llm-d.ai/qos", self.qos_value))
                 now = time.time()
-                if epp_n > 0 and math.isfinite(epp_cpu):
+                # Only append fully valid samples (CPU and Mem finite)
+                if epp_n > 0 and math.isfinite(epp_cpu) and math.isfinite(epp_mem):
                     self.epp_samples.append((now, epp_cpu, epp_mem, epp_n))
-                if qos_n > 0 and math.isfinite(qos_cpu):
+                if qos_n > 0 and math.isfinite(qos_cpu) and math.isfinite(qos_mem):
                     self.qos_samples.append((now, qos_cpu, qos_mem, qos_n))
             except Exception:
                 pass
             time.sleep(self.interval)
 
     def _avg(self, samples: List[tuple], idx: int) -> float:
-        vals = [s[idx] for s in samples]
+        vals = [s[idx] for s in samples if math.isfinite(s[idx])]
         return sum(vals) / len(vals) if vals else float("nan")
 
     def epp_cpu_avg(self) -> float: return self._avg(self.epp_samples, 1)
@@ -299,6 +300,23 @@ def run_phase(name: str, qos: str, num_requests: int, concurrency: int) -> Dict:
 
     k8s_sampler.stop()
 
+    # Fallback: take a snapshot if we have no/NaN samples
+    try:
+        need_epp = (len(k8s_sampler.epp_samples) == 0) or (not math.isfinite(k8s_sampler.epp_cpu_avg()) or not math.isfinite(k8s_sampler.epp_mem_avg()))
+        need_qos = (len(k8s_sampler.qos_samples) == 0) or (not math.isfinite(k8s_sampler.qos_cpu_avg()) or not math.isfinite(k8s_sampler.qos_mem_avg()))
+        if need_epp or need_qos:
+            items = fetch_pods_metrics(METRICS_API_BASE, NAMESPACE)
+            if need_epp:
+                epp_cpu, epp_mem, epp_n = summarize_group_avgs(items, name_contains=EPP_NAME_CONTAINS)
+                if epp_n > 0 and math.isfinite(epp_cpu) and math.isfinite(epp_mem):
+                    k8s_sampler.epp_samples.append((time.time(), epp_cpu, epp_mem, epp_n))
+            if need_qos:
+                qos_cpu, qos_mem, qos_n = summarize_group_avgs(items, label_eq=("llm-d.ai/qos", qos))
+                if qos_n > 0 and math.isfinite(qos_cpu) and math.isfinite(qos_mem):
+                    k8s_sampler.qos_samples.append((time.time(), qos_cpu, qos_mem, qos_n))
+    except Exception:
+        pass
+
     stats = {
         "phase": name,
         "qos": qos,
@@ -307,11 +325,14 @@ def run_phase(name: str, qos: str, num_requests: int, concurrency: int) -> Dict:
         "ttfb_ms": ttfb_ms,
         "total_ms": total_ms,
         "per_pod": dict(per_pod),
-        # averages during load
+        # averages during load (after fallback)
         "epp_cpu_mcores_avg": k8s_sampler.epp_cpu_avg(),
         "epp_mem_mib_avg": k8s_sampler.epp_mem_avg(),
         "qos_cpu_mcores_avg": k8s_sampler.qos_cpu_avg(),
         "qos_mem_mib_avg": k8s_sampler.qos_mem_avg(),
+        # sample counts for weighted aggregation
+        "epp_samples_n": len(k8s_sampler.epp_samples),
+        "qos_samples_n": len(k8s_sampler.qos_samples),
     }
     return stats
 
@@ -340,16 +361,27 @@ def main():
     prem_errors = 0
     prem_pod_hits: Dict[str, int] = defaultdict(int)
 
+    # Weighted aggregation accumulators
+    epp_cpu_wsum = epp_mem_wsum = 0.0
+    epp_wcount = 0
+    std_qos_cpu_wsum = std_qos_mem_wsum = 0.0
+    std_qos_wcount = 0
+    prm_qos_cpu_wsum = prm_qos_mem_wsum = 0.0
+    prm_qos_wcount = 0
+
     for i in range(1, RUNS + 1):
         print(f"[Run {i}/{RUNS}] Starting STANDARD x{PHASE_REQUESTS} ...")
         std_stats = run_phase("standard", "standard", PHASE_REQUESTS, CONCURRENCY)
+        # Safe formatting (avoid printing 'nanm'/'nanMi')
+        def _fmt(v, unit):
+            return f"{v:.1f}{unit}" if math.isfinite(v) else "N/A"
         print(
             f"[Run {i}] STANDARD done | "
             f"{summarize('TTFB(ms)', std_stats['ttfb_ms'])} | "
             f"{summarize('Total(ms)', std_stats['total_ms'])} | "
             f"errors={std_stats['errors']} | "
-            f"EPP(avg): cpu={std_stats['epp_cpu_mcores_avg']:.1f}m, mem={std_stats['epp_mem_mib_avg']:.1f}Mi | "
-            f"QoS(avg): cpu={std_stats['qos_cpu_mcores_avg']:.1f}m, mem={std_stats['qos_mem_mib_avg']:.1f}Mi"
+            f"EPP(avg): cpu={_fmt(std_stats['epp_cpu_mcores_avg'],'m')}, mem={_fmt(std_stats['epp_mem_mib_avg'],'Mi')} | "
+            f"QoS(avg): cpu={_fmt(std_stats['qos_cpu_mcores_avg'],'m')}, mem={_fmt(std_stats['qos_mem_mib_avg'],'Mi')}"
         )
 
         print(f"[Run {i}] Starting PREMIUM x{PHASE_REQUESTS} ...")
@@ -359,8 +391,8 @@ def main():
             f"{summarize('TTFB(ms)', prem_stats['ttfb_ms'])} | "
             f"{summarize('Total(ms)', prem_stats['total_ms'])} | "
             f"errors={prem_stats['errors']} | "
-            f"EPP(avg): cpu={prem_stats['epp_cpu_mcores_avg']:.1f}m, mem={prem_stats['epp_mem_mib_avg']:.1f}Mi | "
-            f"QoS(avg): cpu={prem_stats['qos_cpu_mcores_avg']:.1f}m, mem={prem_stats['qos_mem_mib_avg']:.1f}Mi"
+            f"EPP(avg): cpu={_fmt(prem_stats['epp_cpu_mcores_avg'],'m')}, mem={_fmt(prem_stats['epp_mem_mib_avg'],'Mi')} | "
+            f"QoS(avg): cpu={_fmt(prem_stats['qos_cpu_mcores_avg'],'m')}, mem={_fmt(prem_stats['qos_mem_mib_avg'],'Mi')}"
         )
 
         # Accumulate per QoS
@@ -375,6 +407,48 @@ def main():
         prem_errors += prem_stats["errors"]
         for pod, cnt in prem_stats["per_pod"].items():
             prem_pod_hits[pod] += cnt
+
+        # Weighted aggregation — skip non-finite/zero-sample phases
+        if std_stats["epp_samples_n"] > 0 and math.isfinite(std_stats["epp_cpu_mcores_avg"]) and math.isfinite(std_stats["epp_mem_mib_avg"]):
+            epp_cpu_wsum += std_stats["epp_cpu_mcores_avg"] * std_stats["epp_samples_n"]
+            epp_mem_wsum += std_stats["epp_mem_mib_avg"]   * std_stats["epp_samples_n"]
+            epp_wcount   += std_stats["epp_samples_n"]
+        if prem_stats["epp_samples_n"] > 0 and math.isfinite(prem_stats["epp_cpu_mcores_avg"]) and math.isfinite(prem_stats["epp_mem_mib_avg"]):
+            epp_cpu_wsum += prem_stats["epp_cpu_mcores_avg"] * prem_stats["epp_samples_n"]
+            epp_mem_wsum += prem_stats["epp_mem_mib_avg"]   * prem_stats["epp_samples_n"]
+            epp_wcount   += prem_stats["epp_samples_n"]
+
+        if std_stats["qos_samples_n"] > 0 and math.isfinite(std_stats["qos_cpu_mcores_avg"]) and math.isfinite(std_stats["qos_mem_mib_avg"]):
+            std_qos_cpu_wsum += std_stats["qos_cpu_mcores_avg"] * std_stats["qos_samples_n"]
+            std_qos_mem_wsum += std_stats["qos_mem_mib_avg"]   * std_stats["qos_samples_n"]
+            std_qos_wcount   += std_stats["qos_samples_n"]
+
+        if prem_stats["qos_samples_n"] > 0 and math.isfinite(prem_stats["qos_cpu_mcores_avg"]) and math.isfinite(prem_stats["qos_mem_mib_avg"]):
+            prm_qos_cpu_wsum += prem_stats["qos_cpu_mcores_avg"] * prem_stats["qos_samples_n"]
+            prm_qos_mem_wsum += prem_stats["qos_mem_mib_avg"]   * prem_stats["qos_samples_n"]
+            prm_qos_wcount   += prem_stats["qos_samples_n"]
+
+    # Aggregated resources
+    def safe_avg(wsum, cnt): 
+        # wsum already built from finite samples only; cnt is number of finite samples
+        return (wsum / cnt) if (cnt and math.isfinite(wsum)) else float("nan")
+
+    agg_epp_cpu = safe_avg(epp_cpu_wsum, epp_wcount)
+    agg_epp_mem = safe_avg(epp_mem_wsum, epp_wcount)
+    agg_std_cpu = safe_avg(std_qos_cpu_wsum, std_qos_wcount)
+    agg_std_mem = safe_avg(std_qos_mem_wsum, std_qos_wcount)
+    agg_prm_cpu = safe_avg(prm_qos_cpu_wsum, prm_qos_wcount)
+    agg_prm_mem = safe_avg(prm_qos_mem_wsum, prm_qos_wcount)
+
+    def fmt_resource(cpu, mem, samples):
+        cpu_str = f"{cpu:.1f}m" if math.isfinite(cpu) else "N/A"
+        mem_str = f"{mem:.1f}Mi" if math.isfinite(mem) else "N/A"
+        return f"cpu={cpu_str}, mem={mem_str} (samples={samples})"
+
+    print("\n==== Aggregated Resource Averages ====")
+    print(f"EPP(avg): {fmt_resource(agg_epp_cpu, agg_epp_mem, epp_wcount)}")
+    print(f"QoS=standard(avg): {fmt_resource(agg_std_cpu, agg_std_mem, std_qos_wcount)}")
+    print(f"QoS=premium(avg):  {fmt_resource(agg_prm_cpu, agg_prm_mem, prm_qos_wcount)}")
 
     print("\n==== Aggregate Results (STANDARD) ====")
     print(summarize("TTFB(ms)", std_ttfb))
